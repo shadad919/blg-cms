@@ -1,0 +1,67 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "logout": "Logout",
+    "login": "Login",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "actions": "Actions",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "noData": "No data available"
+  },
+  "auth": {
+    "loginTitle": "Admin Login",
+    "loginSubtitle": "Sign in to access the admin dashboard",
+    "invalidCredentials": "Invalid email or password",
+    "loginSuccess": "Login successful"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "overview": "Overview",
+    "totalPosts": "Total Posts",
+    "pendingPosts": "Pending Posts",
+    "approvedPosts": "Approved Posts",
+    "publishedPosts": "Published Posts"
+  },
+  "posts": {
+    "title": "Posts",
+    "createPost": "Create Post",
+    "editPost": "Edit Post",
+    "deletePost": "Delete Post",
+    "postDetails": "Post Details",
+    "titleLabel": "Title",
+    "contentLabel": "Content",
+    "statusLabel": "Status",
+    "priorityLabel": "Priority",
+    "authorLabel": "Author",
+    "createdAtLabel": "Created At",
+    "updatedAtLabel": "Updated At",
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "published": "Published"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "posts": "Posts",
+    "settings": "Settings"
+  }
+}

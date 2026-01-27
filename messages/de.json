@@ -1,0 +1,67 @@
+{
+  "common": {
+    "welcome": "Willkommen",
+    "logout": "Abmelden",
+    "login": "Anmelden",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "submit": "Absenden",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "search": "Suchen",
+    "filter": "Filter",
+    "actions": "Aktionen",
+    "loading": "Lädt...",
+    "error": "Fehler",
+    "success": "Erfolg",
+    "noData": "Keine Daten verfügbar"
+  },
+  "auth": {
+    "loginTitle": "Admin-Anmeldung",
+    "loginSubtitle": "Melden Sie sich an, um auf das Admin-Dashboard zuzugreifen",
+    "invalidCredentials": "Ungültige E-Mail oder Passwort",
+    "loginSuccess": "Anmeldung erfolgreich"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "overview": "Übersicht",
+    "totalPosts": "Gesamt Beiträge",
+    "pendingPosts": "Ausstehende Beiträge",
+    "approvedPosts": "Genehmigte Beiträge",
+    "publishedPosts": "Veröffentlichte Beiträge"
+  },
+  "posts": {
+    "title": "Beiträge",
+    "createPost": "Beitrag erstellen",
+    "editPost": "Beitrag bearbeiten",
+    "deletePost": "Beitrag löschen",
+    "postDetails": "Beitragsdetails",
+    "titleLabel": "Titel",
+    "contentLabel": "Inhalt",
+    "statusLabel": "Status",
+    "priorityLabel": "Priorität",
+    "authorLabel": "Autor",
+    "createdAtLabel": "Erstellt am",
+    "updatedAtLabel": "Aktualisiert am",
+    "status": {
+      "pending": "Ausstehend",
+      "approved": "Genehmigt",
+      "rejected": "Abgelehnt",
+      "published": "Veröffentlicht"
+    },
+    "priority": {
+      "low": "Niedrig",
+      "medium": "Mittel",
+      "high": "Hoch",
+      "critical": "Kritisch"
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "posts": "Beiträge",
+    "settings": "Einstellungen"
+  }
+}

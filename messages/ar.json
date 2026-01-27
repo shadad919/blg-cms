@@ -1,0 +1,67 @@
+{
+  "common": {
+    "welcome": "مرحباً",
+    "logout": "تسجيل الخروج",
+    "login": "تسجيل الدخول",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "submit": "إرسال",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "create": "إنشاء",
+    "search": "بحث",
+    "filter": "تصفية",
+    "actions": "الإجراءات",
+    "loading": "جاري التحميل...",
+    "error": "خطأ",
+    "success": "نجح",
+    "noData": "لا توجد بيانات متاحة"
+  },
+  "auth": {
+    "loginTitle": "تسجيل دخول المسؤول",
+    "loginSubtitle": "قم بتسجيل الدخول للوصول إلى لوحة تحكم المسؤول",
+    "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+    "loginSuccess": "تم تسجيل الدخول بنجاح"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "overview": "نظرة عامة",
+    "totalPosts": "إجمالي المنشورات",
+    "pendingPosts": "المنشورات المعلقة",
+    "approvedPosts": "المنشورات المعتمدة",
+    "publishedPosts": "المنشورات المنشورة"
+  },
+  "posts": {
+    "title": "المنشورات",
+    "createPost": "إنشاء منشور",
+    "editPost": "تعديل منشور",
+    "deletePost": "حذف منشور",
+    "postDetails": "تفاصيل المنشور",
+    "titleLabel": "العنوان",
+    "contentLabel": "المحتوى",
+    "statusLabel": "الحالة",
+    "priorityLabel": "الأولوية",
+    "authorLabel": "المؤلف",
+    "createdAtLabel": "تاريخ الإنشاء",
+    "updatedAtLabel": "تاريخ التحديث",
+    "status": {
+      "pending": "معلق",
+      "approved": "معتمد",
+      "rejected": "مرفوض",
+      "published": "منشور"
+    },
+    "priority": {
+      "low": "منخفض",
+      "medium": "متوسط",
+      "high": "عالي",
+      "critical": "حرج"
+    }
+  },
+  "navigation": {
+    "dashboard": "لوحة التحكم",
+    "posts": "المنشورات",
+    "settings": "الإعدادات"
+  }
+}
