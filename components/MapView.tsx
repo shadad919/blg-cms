@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic'
 import { useParams } from 'next/navigation'
 import { Post } from '@/lib/types'
 import { format, subDays, startOfDay, endOfDay } from 'date-fns'
-import { Eye, Image as ImageIcon, Filter, X } from 'lucide-react'
+import { Eye, Image as ImageIcon, Filter, X, MapPin, Copy, Check } from 'lucide-react'
+import { generateArabicMessage } from '@/lib/maps'
 
 interface MapViewProps {
   posts: Post[]
@@ -121,6 +122,7 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
   const [customStartDate, setCustomStartDate] = useState<string>('')
   const [customEndDate, setCustomEndDate] = useState<string>('')
   const [showFilters, setShowFilters] = useState(true)
+  const [copiedPostId, setCopiedPostId] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -243,6 +245,26 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
       mine: '/assets/mine.svg',
     }
     return iconMap[category] || iconMap.road
+  }
+
+  const handleCopyUrl = async (post: Post) => {
+    if (!post.location) return
+    
+    const message = generateArabicMessage({
+      title: post.title,
+      content: post.content,
+      category: post.category,
+      location: post.location,
+    })
+    
+    try {
+      await navigator.clipboard.writeText(message)
+      const postId = post._id || post.id || ''
+      setCopiedPostId(postId)
+      setTimeout(() => setCopiedPostId(null), 2000)
+    } catch (error) {
+      console.error('Failed to copy message:', error)
+    }
   }
 
   const createCustomIcon = (post: Post) => {
@@ -523,10 +545,31 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
                       </div>
                     )}
                     
-                    {post.location?.address && (
-                      <div className="flex items-start gap-2">
-                        <span className="font-medium text-gray-700">Address:</span>
-                        <span className="text-gray-600 text-[11px] leading-tight">{post.location.address}</span>
+                    {post.location && (
+                      <div className="space-y-2">
+                        {post.location.address && (
+                          <div className="flex items-start gap-2">
+                            <span className="font-medium text-gray-700">Address:</span>
+                            <span className="text-gray-600 text-[11px] leading-tight">{post.location.address}</span>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => handleCopyUrl(post)}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md text-xs font-medium transition-colors border border-blue-200 w-full"
+                        >
+                          {copiedPostId === (post._id || post.id) ? (
+                            <>
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <MapPin className="w-3.5 h-3.5" />
+                              <span>Copy Google Maps URL</span>
+                              <Copy className="w-3 h-3" />
+                            </>
+                          )}
+                        </button>
                       </div>
                     )}
                     

@@ -4,9 +4,10 @@ import { z } from 'zod'
 import { ObjectId } from 'mongodb'
 import { ApiResponse, Post, PaginatedResponse, PostStatus, PostPriority } from '@/lib/types'
 import { authenticateAdmin, getCurrentAdmin } from '@/lib/auth-middleware'
-import { getCategoriesCollection, getPostsCollection, getUsersCollection } from '@/lib/mongodb'
+import { getPostsCollection } from '@/lib/mongodb'
 
 const posts = new Hono()
+  .basePath('/posts')
 
 // Helper function to convert MongoDB document to Post
 function convertToPost(doc: any): Post {
@@ -159,34 +160,7 @@ posts.get('/', async (c) => {
     )
   }
 })
-posts.get('/user/:id', async (c) => {
-  const userId = c.req.param('id') as string;
-  const page = Number(c.req.query('page')) || 1
-  const limit = Number(c.req.query('limit')) || 10
-  const collection = await getPostsCollection();
-  const posts = await collection.find({ authorId: userId }).skip((page - 1) * limit).limit(limit).toArray();
-  const total = await collection.countDocuments({ authorId: userId });
-  const totalPages = Math.ceil(total / limit);
-  return c.json<ApiResponse<PaginatedResponse<Post>>>(
-    {
-      result: {
-        data: posts.map(convertToPost),
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages,
-          hasNext: page < totalPages,
-          hasPrev: page > 1,
-        },
-      },
-    result_message: {
-      title: 'Success',
-      type: 'OK',
-      message: 'Posts fetched successfully',
-    },
-  });
-});
+
 // Get single post
 posts.get('/:id', async (c) => {
   try {
@@ -245,13 +219,15 @@ posts.get('/:id', async (c) => {
   }
 })
 
-// Create post (public - from Android app)
+// Create post (from Android app or admin)
 posts.post(
   '/',
+  authenticateAdmin,
   zValidator('json', createPostSchema),
   async (c) => {
     try {
       const data = c.req.valid('json')
+      const currentAdmin = getCurrentAdmin(c)
       const collection = await getPostsCollection()
 
       const now = new Date().toISOString()

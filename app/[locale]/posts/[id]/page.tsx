@@ -5,9 +5,10 @@ import { useParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import api from '@/lib/api'
 import Layout from '@/components/Layout'
-import { ArrowLeft, Edit } from 'lucide-react'
+import { ArrowLeft, Edit, MapPin, Copy, Check } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { generateArabicMessage } from '@/lib/maps'
 
 interface Post {
   id: string
@@ -17,8 +18,14 @@ interface Post {
   authorName?: string
   status: 'pending' | 'approved' | 'rejected' | 'published'
   priority: 'low' | 'medium' | 'high' | 'critical'
+  category?: 'road' | 'electricity' | 'street_light' | 'building' | 'wall' | 'water' | 'mine'
   tags?: string[]
   images?: string[]
+  location?: {
+    latitude: number
+    longitude: number
+    address?: string
+  }
   createdAt: string
   updatedAt: string
   publishedAt?: string
@@ -32,6 +39,7 @@ export default function PostDetailPage() {
   const router = useRouter()
   const [post, setPost] = useState<Post | null>(null)
   const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     fetchPost()
@@ -68,6 +76,25 @@ export default function PostDetailPage() {
     }
     const priorityInfo = priorityMap[priority] || priorityMap.medium
     return <span className={priorityInfo.className}>{priorityInfo.label}</span>
+  }
+
+  const handleCopyUrl = async () => {
+    if (!post?.location) return
+    
+    const message = generateArabicMessage({
+      title: post.title,
+      content: post.content,
+      category: post.category || 'road',
+      location: post.location,
+    })
+    
+    try {
+      await navigator.clipboard.writeText(message)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      console.error('Failed to copy message:', error)
+    }
   }
 
   if (loading) {
@@ -163,6 +190,43 @@ export default function PostDetailPage() {
                       {tag}
                     </span>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {post.location && (
+              <div>
+                <label className="label">Location</label>
+                <div className="space-y-2">
+                  {post.location.address && (
+                    <p className="text-text flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-gray-500" />
+                      {post.location.address}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span>Coordinates:</span>
+                    <span className="font-mono">
+                      {post.location.latitude.toFixed(6)}, {post.location.longitude.toFixed(6)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleCopyUrl}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-medium transition-colors border border-blue-200"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="w-4 h-4" />
+                        <span>Copy Google Maps URL</span>
+                        <Copy className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             )}

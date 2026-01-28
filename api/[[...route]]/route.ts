@@ -3,13 +3,10 @@ import { handle } from 'hono/vercel'
 import { HTTPException } from 'hono/http-exception'
 import admin from './admin'
 import posts from './posts'
-import users from './users'
 
 const app = new Hono()
-  .basePath('/api')
   .route('/admin', admin)
   .route('/posts', posts)
-  .route('/users', users)
 
 app.onError((err, c) => {
   console.error(err)

@@ -9,6 +9,7 @@ import { authenticateAdmin, getCurrentAdmin } from '@/lib/auth-middleware'
 import { getAdminsCollection } from '@/lib/mongodb'
 
 const admin = new Hono()
+  .basePath('/admin')
 
 // Helper function to convert MongoDB document to Admin
 function convertToAdmin(doc: any): Admin & { password?: string } {
