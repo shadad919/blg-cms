@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import api from '@/lib/api'
 import Layout from '@/components/Layout'
 import ImageModal from '@/components/ImageModal'
 import { ArrowLeft, Edit, MapPin, Copy, Check } from 'lucide-react'
-import { format } from 'date-fns'
+import { formatLocaleDate } from '@/lib/date-locale'
 import { generateArabicMessage } from '@/lib/maps'
 
 interface Post {
@@ -38,6 +38,7 @@ interface Post {
 export default function PostDetailPage() {
   const t = useTranslations()
   const params = useParams()
+  const locale = useLocale()
   const [post, setPost] = useState<Post | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -170,20 +171,20 @@ export default function PostDetailPage() {
               <div>
                 <label className="label">{t('posts.createdAtLabel')}</label>
                 <p className="text-text dark:text-gray-100">
-                  {format(new Date(post.createdAt), 'PPpp')}
+                  {formatLocaleDate(post.createdAt, 'PPpp', locale)}
                 </p>
               </div>
               <div>
                 <label className="label">{t('posts.updatedAtLabel')}</label>
                 <p className="text-text dark:text-gray-100">
-                  {format(new Date(post.updatedAt), 'PPpp')}
+                  {formatLocaleDate(post.updatedAt, 'PPpp', locale)}
                 </p>
               </div>
               {post.publishedAt && (
                 <div>
                   <label className="label">Published At</label>
                   <p className="text-text dark:text-gray-100">
-                    {format(new Date(post.publishedAt), 'PPpp')}
+                    {formatLocaleDate(post.publishedAt, 'PPpp', locale)}
                   </p>
                 </div>
               )}

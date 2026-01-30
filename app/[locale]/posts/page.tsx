@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import api from '@/lib/api'
 import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react'
 import { Link } from '@/i18n/routing'
+import { formatLocaleDate } from '@/lib/date-locale'
 
 interface Post {
   _id?: string
@@ -24,6 +25,7 @@ interface Post {
 
 export default function PostsPage() {
   const t = useTranslations()
+  const locale = useLocale()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -179,7 +181,7 @@ export default function PostsPage() {
                         <td className="py-3 px-4">{getStatusBadge(post.status)}</td>
                         <td className="py-3 px-4">{getPriorityBadge(post.priority)}</td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-200">
-                          {new Date(post.createdAt).toLocaleDateString()}
+                          {formatLocaleDate(post.createdAt, 'PP', locale)}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center justify-end gap-2">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import api from '@/lib/api'
 import Layout from '@/components/Layout'
@@ -9,7 +9,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import MapView from '@/components/MapView'
 import { FileText, Clock, CheckCircle, Globe, MapPin, TrendingUp, Users, Check } from 'lucide-react'
 import { Post } from '@/lib/types'
-import { format } from 'date-fns'
+import { formatLocaleDate } from '@/lib/date-locale'
 import { dummyPosts } from '@/lib/dummyData'
 import 'leaflet/dist/leaflet.css'
 
@@ -22,6 +22,7 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const t = useTranslations()
+  const locale = useLocale()
   const [stats, setStats] = useState<DashboardStats>({
     totalPosts: 0,
     pendingPosts: 0,
@@ -150,7 +151,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-300">
               <span>{t('dashboard.lastUpdated')}:</span>
-              <span className="font-medium">{format(new Date(), 'MMM d, yyyy HH:mm')}</span>
+              <span className="font-medium">{formatLocaleDate(new Date(), 'MMM d, yyyy HH:mm', locale)}</span>
             </div>
           </div>
 
@@ -290,7 +291,7 @@ export default function DashboardPage() {
                           </div>
                         )}
                         <div className="text-xs text-gray-400 mt-2">
-                          {format(new Date(post.createdAt), 'MMM d, yyyy')}
+                          {formatLocaleDate(post.createdAt, 'MMM d, yyyy', locale)}
                         </div>
                       </div>
                     ))

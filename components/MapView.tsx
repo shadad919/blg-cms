@@ -6,7 +6,8 @@ import { useParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import api from '@/lib/api'
 import { Post } from '@/lib/types'
-import { format, subDays, startOfDay, endOfDay } from 'date-fns'
+import { subDays, startOfDay, endOfDay } from 'date-fns'
+import { formatLocaleDate } from '@/lib/date-locale'
 import { Eye, Image as ImageIcon, Filter, X, MapPin, Copy, Check, CheckCircle } from 'lucide-react'
 import { generateArabicMessage } from '@/lib/maps'
 import ImageModal from '@/components/ImageModal'
@@ -724,7 +725,7 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
                     
                     <div className="flex items-center gap-2 pt-1 border-t border-gray-200 dark:border-gray-500">
                       <span className="text-gray-500 dark:text-gray-300 text-[11px]">
-                        {format(new Date(post.createdAt), 'MMM d, yyyy')}
+                        {formatLocaleDate(post.createdAt, 'MMM d, yyyy', locale)}
                       </span>
                     </div>
                   </div>
