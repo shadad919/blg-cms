@@ -1,36 +1,40 @@
 import { MongoClient, Db, Collection } from 'mongodb'
 
-if (!process.env.MONGO_URI) {
-  throw new Error('Please define the MONGO_URI environment variable inside .env.local')
-}
-
-const uri = process.env.MONGO_URI
 const options = {}
 
-let client: MongoClient
-let clientPromise: Promise<MongoClient>
-
-if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  const globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>
+function getClientPromise(): Promise<MongoClient> {
+  const uri = process.env.MONGO_URI
+  if (!uri) {
+    throw new Error(
+      'Please define the MONGO_URI environment variable (e.g. in .env.local or your host\'s env settings).'
+    )
   }
 
-  if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(uri, options)
-    globalWithMongo._mongoClientPromise = client.connect()
+  if (process.env.NODE_ENV === 'development') {
+    const globalWithMongo = global as typeof globalThis & {
+      _mongoClientPromise?: Promise<MongoClient>
+    }
+    if (!globalWithMongo._mongoClientPromise) {
+      const client = new MongoClient(uri, options)
+      globalWithMongo._mongoClientPromise = client.connect()
+    }
+    return globalWithMongo._mongoClientPromise
   }
-  clientPromise = globalWithMongo._mongoClientPromise
-} else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options)
-  clientPromise = client.connect()
+
+  const client = new MongoClient(uri, options)
+  return client.connect()
+}
+
+// Lazy singleton so we don't require MONGO_URI at build time (e.g. Netlify)
+let _clientPromise: Promise<MongoClient> | null = null
+function clientPromise(): Promise<MongoClient> {
+  if (!_clientPromise) _clientPromise = getClientPromise()
+  return _clientPromise
 }
 
 // Helper function to get database
 export async function getDb(): Promise<Db> {
-  const client = await clientPromise
+  const client = await clientPromise()
   return client.db('blg_db')
 }
 
@@ -57,4 +61,12 @@ export async function getCategoriesCollection(): Promise<Collection> {
 };
 
 
-export default clientPromise
+// Thenable so "await clientPromise" still works; connection is lazy (no MONGO_URI needed at build)
+export default {
+  then(onFulfilled?: (c: MongoClient) => unknown, onRejected?: (err: unknown) => unknown) {
+    return clientPromise().then(onFulfilled, onRejected)
+  },
+  catch(onRejected?: (err: unknown) => unknown) {
+    return clientPromise().catch(onRejected)
+  },
+}
