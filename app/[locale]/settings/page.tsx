@@ -78,11 +78,11 @@ export default function SettingsPage() {
 
           {/* Language */}
           <div className="card">
-            <h2 className="text-xl font-semibold text-text dark:text-gray-100 mb-2 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-text dark:text-white mb-2 flex items-center gap-2">
               <Globe className="w-5 h-5 text-primary" />
               {t('settings.language.title')}
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+            <p className="text-gray-600 dark:text-white text-sm mb-4">
               {t('settings.language.description')}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -104,7 +104,7 @@ export default function SettingsPage() {
 
           {/* Appearance */}
           <div className="card">
-            <h2 className="text-xl font-semibold text-text dark:text-gray-100 mb-2 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-text dark:text-white mb-2 flex items-center gap-2">
               <Sun className="w-5 h-5 text-primary" />
               {t('settings.appearance.title')}
             </h2>

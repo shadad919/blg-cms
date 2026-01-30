@@ -209,11 +209,11 @@ export default function DashboardPage() {
               <div className="card">
                 <div className="flex items-center gap-2 mb-4">
                   <Users className="w-5 h-5 text-primary" />
-                  <h2 className="text-xl font-semibold text-text">{t('dashboard.recentPosts')}</h2>
+                  <h2 className="text-xl font-semibold text-text dark:text-white">{t('dashboard.recentPosts')}</h2>
                 </div>
                 <div className="space-y-4">
                   {recentPosts.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-200 text-center py-4">
+                    <p className="text-sm text-gray-500 dark:text-white text-center py-4">
                       {t('dashboard.noPostsWithLocations')}
                     </p>
                   ) : (
