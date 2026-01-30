@@ -63,14 +63,14 @@ export default function NewPostPage() {
       <div className="space-y-6">
         <Link
           href="/posts"
-          className="flex items-center gap-2 text-text hover:text-primary transition-colors"
+          className="flex items-center gap-2 text-text dark:text-gray-100 hover:text-primary transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Posts
+          {t('posts.backToReports')}
         </Link>
 
         <div className="card">
-          <h1 className="text-3xl font-bold text-text mb-6">{t('posts.createPost')}</h1>
+          <h1 className="text-3xl font-bold text-text dark:text-gray-100 mb-6">{t('posts.createPost')}</h1>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>

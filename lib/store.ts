@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
 interface Admin {
-  id: string
+  _id: string
+  id?: string // For compatibility
   email: string
   name: string
   role: 'admin' | 'super_admin'

@@ -70,10 +70,12 @@ cd app && npm install
 
 2. Set up environment variables:
 
-Create `app/.env.local`:
+Create `.env` or `.env.local`:
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3000
 JWT_SECRET=your-secret-key-change-in-production
+# Required for post image uploads (Vercel Blob)
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxx
 ```
 
 ### Running the Development Server

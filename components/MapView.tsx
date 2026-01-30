@@ -1,45 +1,25 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import api from '@/lib/api'
 import { Post } from '@/lib/types'
 import { format, subDays, startOfDay, endOfDay } from 'date-fns'
-import { Eye, Image as ImageIcon, Filter, X, MapPin, Copy, Check } from 'lucide-react'
+import { Eye, Image as ImageIcon, Filter, X, MapPin, Copy, Check, CheckCircle } from 'lucide-react'
 import { generateArabicMessage } from '@/lib/maps'
+import ImageModal from '@/components/ImageModal'
 
 interface MapViewProps {
   posts: Post[]
   center?: [number, number]
   zoom?: number
+  /** When set, map flies to this post (e.g. from list click) */
+  selectedPostId?: string | null
+  /** Called after post status is updated (e.g. processing / completed) so parent can refetch */
+  onPostUpdated?: () => void
 }
-
-const categories = [
-  { value: 'all', label: 'All Categories' },
-  { value: 'road', label: 'Road' },
-  { value: 'electricity', label: 'Electricity' },
-  { value: 'street_light', label: 'Street Light' },
-  { value: 'building', label: 'Building' },
-  { value: 'wall', label: 'Wall' },
-  { value: 'water', label: 'Water' },
-  { value: 'mine', label: 'Mine' },
-]
-
-const dateRanges = [
-  { value: 'all', label: 'All Time' },
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'Last 7 Days' },
-  { value: 'month', label: 'Last 30 Days' },
-  { value: 'custom', label: 'Custom Range' },
-]
-
-const statuses = [
-  { value: 'all', label: 'All Statuses' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'rejected', label: 'Rejected' },
-  { value: 'published', label: 'Published' },
-]
 
 // Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
@@ -61,6 +41,49 @@ const Popup = dynamic(
   () => import('react-leaflet').then((mod) => mod.Popup),
   { ssr: false }
 )
+
+// Wraps Marker and opens its popup when this post is selected (e.g. from list click)
+function MarkerWithPopupOpen({
+  postId,
+  selectedPostId,
+  position,
+  icon,
+  onMarkerClick,
+  children,
+}: {
+  postId: string
+  selectedPostId: string | null
+  position: [number, number]
+  icon: L.DivIcon | undefined
+  onMarkerClick?: (postId: string) => void
+  children: React.ReactNode
+}) {
+  const markerRef = useRef<L.Marker | null>(null)
+  useEffect(() => {
+    if (selectedPostId !== postId) return
+    const t = setTimeout(() => {
+      ;(markerRef.current as L.Marker & { openPopup?: () => void })?.openPopup?.()
+    }, 550)
+    return () => clearTimeout(t)
+  }, [selectedPostId, postId])
+
+  // When marker is clicked (e.g. user opens popup from map), notify parent to set processing
+  useEffect(() => {
+    const m = markerRef.current
+    if (!m || !onMarkerClick) return
+    const handler = () => onMarkerClick(postId)
+    ;(m as L.Marker).on('click', handler)
+    return () => {
+      ;(m as L.Marker).off('click', handler)
+    }
+  }, [postId, onMarkerClick])
+
+  return (
+    <Marker ref={markerRef} position={position} icon={icon}>
+      {children}
+    </Marker>
+  )
+}
 
 // Component to fit bounds - must be inside MapContainer
 // This component uses useMap hook which must be called unconditionally
@@ -107,15 +130,22 @@ function FitBoundsComponent({ posts }: { posts: Post[] }) {
   return null
 }
 
-// Dynamically import FitBounds to avoid SSR
+// Dynamically import FitBounds and FlyToPost to avoid SSR
 const FitBounds = dynamic(() => Promise.resolve(FitBoundsComponent), { ssr: false })
+const MapFlyToPost = dynamic(
+  () => import('@/components/MapFlyToPost').then((m) => m.default),
+  { ssr: false }
+)
 
-export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 }: MapViewProps) {
+export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12, selectedPostId = null, onPostUpdated }: MapViewProps) {
   const params = useParams()
   const locale = (params?.locale as string) || 'en'
+  const tMap = useTranslations('map')
+  const tPosts = useTranslations('posts')
   const [mounted, setMounted] = useState(false)
   const [leafletLoaded, setLeafletLoaded] = useState(false)
   const [L, setL] = useState<any>(null)
+  const [mapKey] = useState(() => `map-${typeof window !== 'undefined' ? window.performance.now() : Date.now()}-${Math.random().toString(36).slice(2)}`)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [selectedDateRange, setSelectedDateRange] = useState<string>('all')
@@ -123,6 +153,76 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
   const [customEndDate, setCustomEndDate] = useState<string>('')
   const [showFilters, setShowFilters] = useState(true)
   const [copiedPostId, setCopiedPostId] = useState<string | null>(null)
+  const [completingPostId, setCompletingPostId] = useState<string | null>(null)
+  const [imageViewerOpen, setImageViewerOpen] = useState(false)
+  const [imageViewerUrls, setImageViewerUrls] = useState<string[]>([])
+  const [imageViewerIndex, setImageViewerIndex] = useState(0)
+
+  const handleMarkerClick = useMemo(
+    () => async (postId: string) => {
+      const post = posts.find((p) => (p._id || p.id) === postId)
+      if (post?.status === 'completed' || post?.status === 'processing') return
+      try {
+        await api.patch(`/posts/${postId}`, { status: 'processing' })
+        onPostUpdated?.()
+      } catch (e) {
+        console.error('Failed to set processing:', e)
+      }
+    },
+    [onPostUpdated, posts]
+  )
+
+  const handleCompletePost = async (postId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setCompletingPostId(postId)
+    try {
+      await api.patch(`/posts/${postId}`, { status: 'completed' })
+      onPostUpdated?.()
+    } catch (e) {
+      console.error('Failed to complete post:', e)
+    } finally {
+      setCompletingPostId(null)
+    }
+  }
+
+  const categories = useMemo(
+    () => [
+      { value: 'all', label: tMap('allCategories') },
+      { value: 'road', label: tMap('categories.road') },
+      { value: 'electricity', label: tMap('categories.electricity') },
+      { value: 'street_light', label: tMap('categories.street_light') },
+      { value: 'building', label: tMap('categories.building') },
+      { value: 'wall', label: tMap('categories.wall') },
+      { value: 'water', label: tMap('categories.water') },
+      { value: 'mine', label: tMap('categories.mine') },
+    ],
+    [tMap]
+  )
+
+  const dateRanges = useMemo(
+    () => [
+      { value: 'all', label: tMap('allTime') },
+      { value: 'today', label: tMap('today') },
+      { value: 'week', label: tMap('last7Days') },
+      { value: 'month', label: tMap('last30Days') },
+      { value: 'custom', label: tMap('customRange') },
+    ],
+    [tMap]
+  )
+
+  const statuses = useMemo(
+    () => [
+      { value: 'all', label: tMap('allStatuses') },
+      { value: 'pending', label: tPosts('status.pending') },
+      { value: 'processing', label: tPosts('status.processing') },
+      { value: 'completed', label: tPosts('status.completed') },
+      { value: 'approved', label: tPosts('status.approved') },
+      { value: 'rejected', label: tPosts('status.rejected') },
+      { value: 'published', label: tPosts('status.published') },
+    ],
+    [tMap, tPosts]
+  )
 
   useEffect(() => {
     setMounted(true)
@@ -191,7 +291,7 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
         return postDate >= startDate && postDate <= endDate
       })
     }
-
+    console.log('filtered',filtered)
     return filtered
   }, [posts, selectedCategory, selectedStatus, selectedDateRange, customStartDate, customEndDate])
 
@@ -200,9 +300,12 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'published':
+      case 'completed':
         return '#16A34A'
       case 'approved':
         return '#1E3A8A'
+      case 'processing':
+        return '#2563EB'
       case 'pending':
         return '#F59E0B'
       case 'rejected':
@@ -318,16 +421,16 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
 
   if (!mounted) {
     return (
-      <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center">
-        <p className="text-gray-500">Loading map...</p>
+      <div className="w-full h-full bg-gray-100 dark:bg-gray-900 rounded-lg flex items-center justify-center">
+        <p className="text-gray-500 dark:text-gray-300">{tMap('loadingMap')}</p>
       </div>
     )
   }
 
   if (filteredPosts.length === 0) {
     return (
-      <div className="w-full h-full bg-gray-100 rounded-lg flex flex-col items-center justify-center">
-        <p className="text-gray-500 mb-2">No posts match the selected filters</p>
+      <div className="w-full h-full bg-gray-100 dark:bg-gray-900 rounded-lg flex flex-col items-center justify-center">
+        <p className="text-gray-500 dark:text-gray-300 mb-2">{tMap('noPostsMatch')}</p>
         {(selectedCategory !== 'all' || selectedStatus !== 'all' || selectedDateRange !== 'all') && (
           <button
             onClick={() => {
@@ -339,7 +442,7 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
             }}
             className="text-sm text-primary hover:underline"
           >
-            Clear filters
+            {tMap('clearFilters')}
           </button>
         )}
       </div>
@@ -347,18 +450,18 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
   }
 
   return (
-    <div className="w-full h-full rounded-lg overflow-hidden border border-gray-200 relative">
+    <div className="w-full h-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 relative">
       {/* Filter Panel */}
-      <div className="absolute top-4 right-4 z-[1000] bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-xs">
+      <div className="absolute top-4 right-4 z-[1000] bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-4 max-w-xs">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-primary" />
-            <h3 className="font-semibold text-sm text-text">Filters</h3>
+            <h3 className="font-semibold text-sm text-text dark:text-gray-100">{tMap('filters')}</h3>
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-gray-100"
-            title={showFilters ? 'Hide Filters' : 'Show Filters'}
+            className="text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+            title={showFilters ? tMap('hideFilters') : tMap('showFilters')}
           >
             {showFilters ? <X className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
           </button>
@@ -368,13 +471,13 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
           <div className="space-y-4">
             {/* Category Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">
-                Category
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-2">
+                {tMap('categoryLabel')}
               </label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-800 text-text dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 {categories.map((cat) => (
                   <option key={cat.value} value={cat.value}>
@@ -386,13 +489,13 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
 
             {/* Status Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">
-                Status
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-2">
+                {tMap('statusLabel')}
               </label>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-800 text-text dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 {statuses.map((status) => (
                   <option key={status.value} value={status.value}>
@@ -404,13 +507,13 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
 
             {/* Date Range Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">
-                Date Range
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-2">
+                {tMap('dateRangeLabel')}
               </label>
               <select
                 value={selectedDateRange}
                 onChange={(e) => setSelectedDateRange(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent mb-2"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-800 text-text dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent mb-2"
               >
                 {dateRanges.map((range) => (
                   <option key={range.value} value={range.value}>
@@ -422,21 +525,21 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
               {selectedDateRange === 'custom' && (
                 <div className="space-y-2 mt-2">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Start Date</label>
+                    <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">{tMap('startDate')}</label>
                     <input
                       type="date"
                       value={customStartDate}
                       onChange={(e) => setCustomStartDate(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-800 text-text dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">End Date</label>
+                    <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">{tMap('endDate')}</label>
                     <input
                       type="date"
                       value={customEndDate}
                       onChange={(e) => setCustomEndDate(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-lg bg-white dark:bg-gray-800 text-text dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -451,18 +554,20 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
                     setCustomStartDate('')
                     setCustomEndDate('')
                   }}
-                  className="w-full mt-2 px-3 py-1.5 text-xs text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="w-full mt-2 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-200 hover:text-gray-800 dark:hover:text-gray-50 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Clear Filters
+                  {tMap('clearFilters')}
                 </button>
               )}
             </div>
 
             {/* Results Count */}
-            <div className="pt-2 border-t border-gray-200">
-              <p className="text-xs text-gray-600">
-                Showing <span className="font-semibold text-primary">{filteredPosts.length}</span> of{' '}
-                <span className="font-semibold">{posts.filter((p) => p.location).length}</span> posts
+            <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
+              <p className="text-xs text-gray-600 dark:text-gray-300">
+                {tMap('showingCount', {
+                  count: filteredPosts.length,
+                  total: posts.filter((p) => p.location).length,
+                })}
               </p>
             </div>
           </div>
@@ -470,6 +575,7 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
       </div>
 
       <MapContainer
+        key={mapKey}
         center={center}
         zoom={zoom}
         style={{ height: '100%', width: '100%' }}
@@ -480,42 +586,63 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <FitBounds posts={filteredPosts} />
+        <MapFlyToPost selectedPostId={selectedPostId} posts={filteredPosts} />
         {filteredPosts.map((post) => {
           const icon = createCustomIcon(post)
-          if (!icon || !post.location) return null
+          if (!icon || !post.location?.latitude || !post.location?.longitude) return null
+          const postId = post._id || post.id || ''
+          const position: [number, number] = [post.location.latitude, post.location.longitude]
           return (
-            <Marker
-              key={post._id || post.id}
-              position={[post.location?.latitude || 0, post.location?.longitude || 0]}
+            <MarkerWithPopupOpen
+              key={postId}
+              postId={postId}
+              selectedPostId={selectedPostId}
+              position={position}
               icon={icon}
+              onMarkerClick={onPostUpdated ? handleMarkerClick : undefined}
             >
               <Popup>
                 <div className="p-3 min-w-[240px]">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-sm text-text flex-1 pr-2">{post.title}</h3>
-                    <a
-                      href={`/${locale}/posts/${post._id || post.id}`}
-                      className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors cursor-pointer"
-                      title="View Details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </a>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="font-semibold text-sm text-text dark:text-gray-100 flex-1 min-w-0">{post.title}</h3>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => handleCompletePost(postId, e)}
+                        disabled={completingPostId === postId || post.status === 'completed'}
+                        className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-500 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={tMap('markComplete')}
+                      >
+                        {completingPostId === postId ? (
+                          <span className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <CheckCircle className="w-4 h-4" />
+                        )}
+                      </button>
+                      <a
+                        href={`/${locale}/posts/${post._id || post.id}`}
+                        className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors cursor-pointer"
+                        title={tMap('viewDetails')}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </a>
+                    </div>
                   </div>
                   
                   {post.content && (
-                    <p className="text-xs text-gray-600 mb-3 line-clamp-2">{post.content}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">{post.content}</p>
                   )}
                   
                   <div className="space-y-2 text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-700">Category:</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-200">{tMap('categoryLabelShort')}:</span>
                       <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary capitalize border border-primary/20">
-                        {post.category.replace('_', ' ')}
+                        {post.category ? tMap(`categories.${post.category}`) : post.category}
                       </span>
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-700">Status:</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-200">{tMap('statusLabelShort')}:</span>
                       <span
                         className="px-2.5 py-1 rounded-md text-xs font-medium border"
                         style={{
@@ -524,24 +651,46 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
                           borderColor: `${getStatusColor(post.status)}30`,
                         }}
                       >
-                        {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
+                        {post.status ? tPosts(`status.${post.status}`) : post.status}
                       </span>
                     </div>
                     
-                    {post.images && post.images.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <ImageIcon className="w-3.5 h-3.5 text-gray-500" />
-                        <span className="text-gray-600">
-                          <span className="font-medium">{post.images.length}</span>{' '}
-                          {post.images.length === 1 ? 'image' : 'images'}
-                        </span>
-                      </div>
-                    )}
+                    {post.images && post.images.length > 0 && (() => {
+                      const urls = post.images
+                        .map((img) => (typeof img === 'string' ? img : (img as { publicUrl?: string; localUrl?: string }).publicUrl || ((img as { localUrl?: string }).localUrl?.startsWith('http') ? (img as { localUrl: string }).localUrl : null)))
+                        .filter(Boolean) as string[]
+                      return urls.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            setImageViewerUrls(urls)
+                            setImageViewerIndex(0)
+                            setImageViewerOpen(true)
+                          }}
+                          className="flex items-center gap-2 text-left hover:underline text-gray-600 dark:text-gray-300"
+                        >
+                          <ImageIcon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                          <span>
+                            <span className="font-medium">{urls.length}</span>{' '}
+                            {urls.length === 1 ? 'image' : 'images'} — View
+                          </span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <ImageIcon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                          <span className="text-gray-600 dark:text-gray-300">
+                            <span className="font-medium">{post.images.length}</span> image(s) (local)
+                          </span>
+                        </div>
+                      )
+                    })()}
                     
                     {post.authorName && (
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-700">Author:</span>
-                        <span className="text-gray-600">{post.authorName}</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-200">Author:</span>
+                        <span className="text-gray-600 dark:text-gray-300">{post.authorName}</span>
                       </div>
                     )}
                     
@@ -549,13 +698,13 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
                       <div className="space-y-2">
                         {post.location.address && (
                           <div className="flex items-start gap-2">
-                            <span className="font-medium text-gray-700">Address:</span>
-                            <span className="text-gray-600 text-[11px] leading-tight">{post.location.address}</span>
+                            <span className="font-medium text-gray-700 dark:text-gray-200">Address:</span>
+                            <span className="text-gray-600 dark:text-gray-300 text-[11px] leading-tight">{post.location.address}</span>
                           </div>
                         )}
                         <button
                           onClick={() => handleCopyUrl(post)}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md text-xs font-medium transition-colors border border-blue-200 w-full"
+                          className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-500/20 hover:bg-blue-100 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 rounded-md text-xs font-medium transition-colors border border-blue-200 dark:border-blue-500/50 w-full"
                         >
                           {copiedPostId === (post._id || post.id) ? (
                             <>
@@ -573,18 +722,27 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12 
                       </div>
                     )}
                     
-                    <div className="flex items-center gap-2 pt-1 border-t border-gray-200">
-                      <span className="text-gray-500 text-[11px]">
+                    <div className="flex items-center gap-2 pt-1 border-t border-gray-200 dark:border-gray-500">
+                      <span className="text-gray-500 dark:text-gray-300 text-[11px]">
                         {format(new Date(post.createdAt), 'MMM d, yyyy')}
                       </span>
                     </div>
                   </div>
                 </div>
               </Popup>
-            </Marker>
+            </MarkerWithPopupOpen>
           )
         })}
       </MapContainer>
+
+      <ImageModal
+        open={imageViewerOpen}
+        onClose={() => setImageViewerOpen(false)}
+        images={imageViewerUrls}
+        currentIndex={imageViewerIndex}
+        onIndexChange={setImageViewerIndex}
+        alt="Report"
+      />
     </div>
   )
 }

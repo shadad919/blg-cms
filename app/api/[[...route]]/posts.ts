@@ -2,9 +2,50 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { ObjectId } from 'mongodb'
+import { put } from '@vercel/blob'
 import { ApiResponse, Post, PaginatedResponse, PostStatus, PostPriority } from '@/lib/types'
 import { authenticateAdmin, getCurrentAdmin } from '@/lib/auth-middleware'
 import { getCategoriesCollection, getPostsCollection, getUsersCollection } from '@/lib/mongodb'
+
+const IMAGE_EXT_MAP: Record<string, string> = {
+  'image/jpeg': 'jpeg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+}
+
+function getExtensionFromBase64(base64: string): string {
+  const match = base64.match(/^data:image\/(\w+);base64,/)
+  if (match) return IMAGE_EXT_MAP[`image/${match[1]}`] || match[1]
+  return 'jpg'
+}
+
+function normalizeImageFilename(filename: string, extension: string): string {
+  const ext = extension.startsWith('.') ? extension.slice(1) : extension
+  const lower = filename.toLowerCase()
+  return lower.endsWith(ext) || lower.endsWith(`.${ext}`) ? filename : `${filename}.${ext}`
+}
+
+async function uploadBase64ToBlob(
+  base64: string,
+  filename: string
+): Promise<{ publicUrl: string }> {
+  const extension = getExtensionFromBase64(base64)
+  const normalizedFilename = normalizeImageFilename(filename, extension)
+  const pathname = `posts/${Date.now()}-${Math.random().toString(36).slice(2, 9)}-${normalizedFilename}`
+
+  const base64Data = base64.replace(/^data:image\/\w+;base64,/, '')
+  const buffer = Buffer.from(base64Data, 'base64')
+
+  const blob = await put(pathname, buffer, {
+    access: 'public',
+    contentType: `image/${extension === 'jpg' ? 'jpeg' : extension}`,
+    addRandomSuffix: false,
+  })
+
+  return { publicUrl: blob.url }
+}
 
 const posts = new Hono()
 
@@ -32,7 +73,7 @@ function convertToPost(doc: any): Post {
   }
 }
 
-// Post creation schema
+// Post creation schema – images sent as base64 + filename, uploaded to Vercel Blob
 const createPostSchema = z.object({
   title: z.string().optional(),
   content: z.string().optional(),
@@ -41,7 +82,15 @@ const createPostSchema = z.object({
   category: z.enum(['road', 'electricity', 'street_light', 'building', 'wall', 'water', 'mine']),
   priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
   tags: z.array(z.string()).optional(),
-  images: z.array(z.string()).optional(),
+  images: z
+    .array(
+      z.object({
+        localUrl: z.string().optional(),
+        base64: z.string(),
+        filename: z.string(),
+      })
+    )
+    .optional(),
   location: z
     .object({
       latitude: z.number(),
@@ -55,11 +104,18 @@ const createPostSchema = z.object({
 const updatePostSchema = z.object({
   title: z.string().min(1).optional(),
   content: z.string().min(1).optional(),
-  status: z.enum(['pending', 'approved', 'rejected', 'published']).optional(),
+  status: z.enum(['pending', 'processing', 'completed', 'approved', 'rejected', 'published']).optional(),
   category: z.enum(['road', 'electricity', 'street_light', 'building', 'wall', 'water', 'mine']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
   tags: z.array(z.string()).optional(),
-  images: z.array(z.string()).optional(),
+  images: z
+    .array(
+      z.object({
+        localUrl: z.string(),
+        publicUrl: z.string(),
+      })
+    )
+    .optional(),
   location: z
     .object({
       latitude: z.number(),
@@ -170,7 +226,7 @@ posts.get('/user/:id', async (c) => {
   return c.json<ApiResponse<PaginatedResponse<Post>>>(
     {
       result: {
-        data: posts.map(convertToPost),
+        data: posts.map(convertToPost).sort((a: Post, b: Post) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
         pagination: {
           page,
           limit,
@@ -254,6 +310,33 @@ posts.post(
       const data = c.req.valid('json')
       const collection = await getPostsCollection()
 
+      let uploadedImages: { localUrl: string; publicUrl: string }[] = []
+      if (data.images && data.images.length > 0) {
+        try {
+          for (let i = 0; i < data.images.length; i++) {
+            const { base64, filename } = data.images[i]
+            const image = await uploadBase64ToBlob(base64, filename)
+            uploadedImages.push({ localUrl: data.images[i].localUrl || '', publicUrl: image.publicUrl })
+          }
+        } catch (blobError) {
+          console.error('Vercel Blob upload failed:', blobError)
+          return c.json<ApiResponse>(
+            {
+              result: null,
+              result_message: {
+                title: 'Upload Error',
+                type: 'ERROR',
+                message:
+                  process.env.BLOB_READ_WRITE_TOKEN
+                    ? 'Image upload failed'
+                    : 'Image upload not configured (BLOB_READ_WRITE_TOKEN missing)',
+              },
+            },
+            500
+          )
+        }
+      }
+
       const now = new Date().toISOString()
       const newPostDoc = {
         title: data.title,
@@ -263,7 +346,7 @@ posts.post(
         status: 'pending' as PostStatus,
         priority: data.priority,
         tags: data.tags || [],
-        images: data.images || [],
+        images: uploadedImages,
         category: data.category,
         location: data.location,
         createdAt: now,

@@ -28,17 +28,60 @@
   "dashboard": {
     "title": "لوحة التحكم",
     "overview": "نظرة عامة",
-    "totalPosts": "إجمالي المنشورات",
-    "pendingPosts": "المنشورات المعلقة",
-    "approvedPosts": "المنشورات المعتمدة",
-    "publishedPosts": "المنشورات المنشورة"
+    "totalPosts": "إجمالي التقارير",
+    "pendingPosts": "التقارير المعلقة",
+    "approvedPosts": "التقارير المعتمدة",
+    "publishedPosts": "التقارير المنشورة",
+    "mapTitle": "خريطة مواقع التقارير",
+    "recentPosts": "أحدث التقارير",
+    "noPostsWithLocations": "لا توجد تقارير بمواقع بعد",
+    "quickActions": "إجراءات سريعة",
+    "createNewPost": "إنشاء تقرير جديد",
+    "reviewPending": "مراجعة المعلقة",
+    "lastUpdated": "آخر تحديث"
+  },
+  "map": {
+    "filters": "تصفية",
+    "categoryLabel": "الفئة",
+    "statusLabel": "الحالة",
+    "dateRangeLabel": "نطاق التاريخ",
+    "clearFilters": "مسح التصفية",
+    "noPostsMatch": "لا توجد تقارير تطابق التصفية",
+    "loadingMap": "جاري تحميل الخريطة...",
+    "showFilters": "إظهار التصفية",
+    "hideFilters": "إخفاء التصفية",
+    "startDate": "تاريخ البداية",
+    "endDate": "تاريخ النهاية",
+    "showingCount": "عرض {count} من {total} تقرير",
+    "categoryLabelShort": "الفئة",
+    "statusLabelShort": "الحالة",
+    "viewDetails": "عرض التفاصيل",
+    "markComplete": "تحديد كمكتمل",
+    "allCategories": "جميع الفئات",
+    "allTime": "كل الوقت",
+    "today": "اليوم",
+    "last7Days": "آخر 7 أيام",
+    "last30Days": "آخر 30 يوماً",
+    "customRange": "نطاق مخصص",
+    "allStatuses": "جميع الحالات",
+    "categories": {
+      "road": "طريق",
+      "electricity": "كهرباء",
+      "street_light": "إنارة شارع",
+      "building": "مبنى",
+      "wall": "جدار",
+      "water": "مياه",
+      "mine": "منجم"
+    }
   },
   "posts": {
-    "title": "المنشورات",
-    "createPost": "إنشاء منشور",
-    "editPost": "تعديل منشور",
-    "deletePost": "حذف منشور",
-    "postDetails": "تفاصيل المنشور",
+    "title": "التقارير",
+    "backToReports": "العودة إلى التقارير",
+    "createPost": "إنشاء تقرير",
+    "editPost": "تعديل تقرير",
+    "deletePost": "حذف تقرير",
+    "deleteConfirm": "هل أنت متأكد من حذف هذا التقرير؟",
+    "postDetails": "تفاصيل التقرير",
     "titleLabel": "العنوان",
     "contentLabel": "المحتوى",
     "statusLabel": "الحالة",
@@ -48,6 +91,8 @@
     "updatedAtLabel": "تاريخ التحديث",
     "status": {
       "pending": "معلق",
+      "processing": "قيد المعالجة",
+      "completed": "مكتمل",
       "approved": "معتمد",
       "rejected": "مرفوض",
       "published": "منشور"
@@ -61,7 +106,27 @@
   },
   "navigation": {
     "dashboard": "لوحة التحكم",
-    "posts": "المنشورات",
+    "posts": "التقارير",
     "settings": "الإعدادات"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "subtitle": "إدارة حسابك وتفضيلاتك",
+    "language": {
+      "title": "اللغة",
+      "description": "اختر اللغة المفضلة لواجهة الاستخدام.",
+      "label": "لغة الواجهة"
+    },
+    "appearance": {
+      "title": "المظهر",
+      "description": "تخصيص شكل لوحة التحكم على جهازك.",
+      "theme": "المظهر",
+      "themeLight": "فاتح",
+      "themeDark": "داكن",
+      "themeSystem": "النظام",
+      "primaryColor": "اللون الأساسي",
+      "primaryColorDescription": "اختر اللون الرئيسي للأزرار والروابط والتمييز."
+    },
+    "saved": "تم حفظ الإعدادات"
   }
 }

@@ -28,17 +28,60 @@
   "dashboard": {
     "title": "Dashboard",
     "overview": "Übersicht",
-    "totalPosts": "Gesamt Beiträge",
-    "pendingPosts": "Ausstehende Beiträge",
-    "approvedPosts": "Genehmigte Beiträge",
-    "publishedPosts": "Veröffentlichte Beiträge"
+    "totalPosts": "Gesamt Berichte",
+    "pendingPosts": "Ausstehende Berichte",
+    "approvedPosts": "Genehmigte Berichte",
+    "publishedPosts": "Veröffentlichte Berichte",
+    "mapTitle": "Berichte-Standortkarte",
+    "recentPosts": "Neueste Berichte",
+    "noPostsWithLocations": "Noch keine Berichte mit Standorten",
+    "quickActions": "Schnellaktionen",
+    "createNewPost": "Neuen Bericht erstellen",
+    "reviewPending": "Ausstehende prüfen",
+    "lastUpdated": "Zuletzt aktualisiert"
+  },
+  "map": {
+    "filters": "Filter",
+    "categoryLabel": "Kategorie",
+    "statusLabel": "Status",
+    "dateRangeLabel": "Zeitraum",
+    "clearFilters": "Filter zurücksetzen",
+    "noPostsMatch": "Keine Berichte entsprechen den gewählten Filtern",
+    "loadingMap": "Karte wird geladen...",
+    "showFilters": "Filter anzeigen",
+    "hideFilters": "Filter ausblenden",
+    "startDate": "Startdatum",
+    "endDate": "Enddatum",
+    "showingCount": "{count} von {total} Berichte angezeigt",
+    "categoryLabelShort": "Kategorie",
+    "statusLabelShort": "Status",
+    "viewDetails": "Details anzeigen",
+    "markComplete": "Als erledigt markieren",
+    "allCategories": "Alle Kategorien",
+    "allTime": "Gesamte Zeit",
+    "today": "Heute",
+    "last7Days": "Letzte 7 Tage",
+    "last30Days": "Letzte 30 Tage",
+    "customRange": "Benutzerdefinierter Zeitraum",
+    "allStatuses": "Alle Status",
+    "categories": {
+      "road": "Straße",
+      "electricity": "Strom",
+      "street_light": "Straßenlaterne",
+      "building": "Gebäude",
+      "wall": "Mauer",
+      "water": "Wasser",
+      "mine": "Mine"
+    }
   },
   "posts": {
-    "title": "Beiträge",
-    "createPost": "Beitrag erstellen",
-    "editPost": "Beitrag bearbeiten",
-    "deletePost": "Beitrag löschen",
-    "postDetails": "Beitragsdetails",
+    "title": "Berichte",
+    "backToReports": "Zurück zu Berichten",
+    "createPost": "Bericht erstellen",
+    "editPost": "Bericht bearbeiten",
+    "deletePost": "Bericht löschen",
+    "deleteConfirm": "Möchten Sie diesen Bericht wirklich löschen?",
+    "postDetails": "Berichtsdetails",
     "titleLabel": "Titel",
     "contentLabel": "Inhalt",
     "statusLabel": "Status",
@@ -48,6 +91,8 @@
     "updatedAtLabel": "Aktualisiert am",
     "status": {
       "pending": "Ausstehend",
+      "processing": "In Bearbeitung",
+      "completed": "Abgeschlossen",
       "approved": "Genehmigt",
       "rejected": "Abgelehnt",
       "published": "Veröffentlicht"
@@ -61,7 +106,27 @@
   },
   "navigation": {
     "dashboard": "Dashboard",
-    "posts": "Beiträge",
+    "posts": "Berichte",
     "settings": "Einstellungen"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "subtitle": "Verwalten Sie Ihr Konto und Ihre Einstellungen",
+    "language": {
+      "title": "Sprache",
+      "description": "Wählen Sie Ihre bevorzugte Sprache für die Oberfläche.",
+      "label": "Oberflächensprache"
+    },
+    "appearance": {
+      "title": "Darstellung",
+      "description": "Passen Sie an, wie das Dashboard auf Ihrem Gerät aussieht.",
+      "theme": "Design",
+      "themeLight": "Hell",
+      "themeDark": "Dunkel",
+      "themeSystem": "System",
+      "primaryColor": "Primärfarbe",
+      "primaryColorDescription": "Wählen Sie die Hauptfarbe für Buttons, Links und Akzente."
+    },
+    "saved": "Einstellungen gespeichert"
   }
 }

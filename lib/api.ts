@@ -1,10 +1,27 @@
 import { apiClient } from './hono'
+import { useAuthStore } from './store'
 
-// Helper to get auth headers
-const getAuthHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const token = localStorage.getItem('token')
-  return token ? { Authorization: `Bearer ${token}` } : {}
+// Helper to build request headers (HeadersInit-safe)
+function buildHeaders(overrides?: HeadersInit): HeadersInit {
+  const record: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token')
+    if (token) record.Authorization = `Bearer ${token}`
+  }
+  const headers = new Headers(record)
+  if (overrides) {
+    new Headers(overrides).forEach((value, key) => headers.set(key, value))
+  }
+  return headers
+}
+
+// When token is malformed or expired, server returns 401. Clear auth and redirect to login.
+function handleUnauthorized() {
+  if (typeof window === 'undefined') return
+  useAuthStore.getState().clearAuth()
+  window.location.href = '/login'
 }
 
 // Wrapper for API calls with auth
@@ -12,19 +29,10 @@ export const api = {
   get: async (path: string, options?: RequestInit) => {
     const response = await fetch(`/api${path}`, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders(),
-        ...options?.headers,
-      },
+      headers: buildHeaders(options?.headers),
     })
     if (!response.ok) {
-      if (response.status === 401) {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('token')
-          window.location.href = '/login'
-        }
-      }
+      if (response.status === 401) handleUnauthorized()
       throw new Error(`API Error: ${response.statusText}`)
     }
     return response.json()
@@ -33,20 +41,11 @@ export const api = {
     const response = await fetch(`/api${path}`, {
       method: 'POST',
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders(),
-        ...options?.headers,
-      },
+      headers: buildHeaders(options?.headers),
       body: data ? JSON.stringify(data) : undefined,
     })
     if (!response.ok) {
-      if (response.status === 401) {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('token')
-          window.location.href = '/login'
-        }
-      }
+      if (response.status === 401) handleUnauthorized()
       throw new Error(`API Error: ${response.statusText}`)
     }
     return response.json()
@@ -55,20 +54,11 @@ export const api = {
     const response = await fetch(`/api${path}`, {
       method: 'PATCH',
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders(),
-        ...options?.headers,
-      },
+      headers: buildHeaders(options?.headers),
       body: data ? JSON.stringify(data) : undefined,
     })
     if (!response.ok) {
-      if (response.status === 401) {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('token')
-          window.location.href = '/login'
-        }
-      }
+      if (response.status === 401) handleUnauthorized()
       throw new Error(`API Error: ${response.statusText}`)
     }
     return response.json()
@@ -77,19 +67,10 @@ export const api = {
     const response = await fetch(`/api${path}`, {
       method: 'DELETE',
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders(),
-        ...options?.headers,
-      },
+      headers: buildHeaders(options?.headers),
     })
     if (!response.ok) {
-      if (response.status === 401) {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('token')
-          window.location.href = '/login'
-        }
-      }
+      if (response.status === 401) handleUnauthorized()
       throw new Error(`API Error: ${response.statusText}`)
     }
     return response.json()

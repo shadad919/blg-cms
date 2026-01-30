@@ -43,8 +43,12 @@ export interface Admin {
 }
 
 // Post types
-export type PostStatus = 'pending' | 'approved' | 'rejected' | 'published'
+export type PostStatus = 'pending' | 'processing' | 'completed' | 'approved' | 'rejected' | 'published'
 export type PostPriority = 'low' | 'medium' | 'high' | 'critical'
+export interface PostImage {
+  localUrl: string
+  publicUrl: string
+}
 export interface Post {
   _id: string
   id?: string // For compatibility
@@ -56,7 +60,7 @@ export interface Post {
   category: 'road' | 'electricity' | 'street_light' | 'building' | 'wall' | 'water' | 'mine'
   priority: PostPriority
   tags?: string[]
-  images?: string[]
+  images?: PostImage[]
   metadata?: Record<string, unknown>
   location?: {
     latitude: number

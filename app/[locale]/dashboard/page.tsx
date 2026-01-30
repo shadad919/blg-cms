@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/routing'
 import api from '@/lib/api'
 import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import MapView from '@/components/MapView'
-import { FileText, Clock, CheckCircle, Globe, MapPin, TrendingUp, Users } from 'lucide-react'
+import { FileText, Clock, CheckCircle, Globe, MapPin, TrendingUp, Users, Check } from 'lucide-react'
 import { Post } from '@/lib/types'
 import { format } from 'date-fns'
 import { dummyPosts } from '@/lib/dummyData'
@@ -30,9 +31,10 @@ export default function DashboardPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [mapLoading, setMapLoading] = useState(true)
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
+  const [completingPostId, setCompletingPostId] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
       try {
         const [allPosts, pending, approved, published, allPostsData] = await Promise.all([
           api.get('/posts?limit=1'),
@@ -66,45 +68,67 @@ export default function DashboardPage() {
 
         setPosts(dummyPosts)
       } finally {
-        setLoading(false)
-        setMapLoading(false)
-      }
+      setLoading(false)
+      setMapLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchData()
   }, [])
+
+  const handleSelectPost = async (postId: string, status?: string) => {
+    setSelectedPostId(postId)
+    if (status === 'completed' || status === 'processing') return
+    try {
+      await api.patch(`/posts/${postId}`, { status: 'processing' })
+      await fetchData()
+    } catch (e) {
+      console.error('Failed to set processing:', e)
+    }
+  }
+
+  const handleCompletePost = async (postId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setCompletingPostId(postId)
+    try {
+      await api.patch(`/posts/${postId}`, { status: 'completed' })
+      await fetchData()
+    } catch (e) {
+      console.error('Failed to complete post:', e)
+    } finally {
+      setCompletingPostId(null)
+    }
+  }
 
   const statCards = [
     {
       title: t('dashboard.totalPosts'),
       value: stats.totalPosts,
       icon: FileText,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
+      iconBoxClass: 'bg-primary/10 text-primary dark:bg-blue-500/20 dark:text-blue-400',
       change: '+12%',
     },
     {
       title: t('dashboard.pendingPosts'),
       value: stats.pendingPosts,
       icon: Clock,
-      color: 'text-warning',
-      bgColor: 'bg-warning/10',
+      iconBoxClass: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
       change: '+5%',
     },
     {
       title: t('dashboard.approvedPosts'),
       value: stats.approvedPosts,
       icon: CheckCircle,
-      color: 'text-success',
-      bgColor: 'bg-success/10',
+      iconBoxClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
       change: '+8%',
     },
     {
       title: t('dashboard.publishedPosts'),
       value: stats.publishedPosts,
       icon: Globe,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
+      iconBoxClass: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
       change: '+15%',
     },
   ]
@@ -121,18 +145,18 @@ export default function DashboardPage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-text mb-2">{t('dashboard.title')}</h1>
-              <p className="text-gray-600">{t('dashboard.overview')}</p>
+              <h1 className="text-3xl font-bold text-text text-gray-900 dark:text-gray-50 mb-2">{t('dashboard.title')}</h1>
+              <p className="text-gray-600 dark:text-gray-300">{t('dashboard.overview')}</p>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>Last updated:</span>
+            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-300">
+              <span>{t('dashboard.lastUpdated')}:</span>
               <span className="font-medium">{format(new Date(), 'MMM d, yyyy HH:mm')}</span>
             </div>
           </div>
 
           {/* Stats Cards */}
           {loading ? (
-            <div className="text-center py-12">{t('common.loading')}</div>
+            <div className="text-center py-12 text-gray-600 dark:text-gray-300">{t('common.loading')}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {statCards.map((card, index) => {
@@ -140,17 +164,17 @@ export default function DashboardPage() {
                 return (
                   <div key={index} className="card hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-4">
-                      <div className={`${card.bgColor} ${card.color} p-3 rounded-lg`}>
+                      <div className={`${card.iconBoxClass} p-3 rounded-lg`}>
                         <Icon className="w-6 h-6" />
                       </div>
-                      <span className="text-xs font-medium text-success flex items-center gap-1">
+                      <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                         <TrendingUp className="w-3 h-3" />
                         {card.change}
                       </span>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">{card.title}</p>
-                      <p className="text-3xl font-bold text-text">{card.value}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">{card.title}</p>
+                      <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">{card.value}</p>
                     </div>
                   </div>
                 )
@@ -165,7 +189,7 @@ export default function DashboardPage() {
               <div className="card p-0 overflow-hidden">
                 <div className="bg-primary text-white px-6 py-4 flex items-center gap-2">
                   <MapPin className="w-5 h-5" />
-                  <h2 className="text-xl font-semibold">Posts Location Map</h2>
+                  <h2 className="text-xl font-semibold">{t('dashboard.mapTitle')}</h2>
                 </div>
                 <div className="h-[500px] p-4">
                   {mapLoading ? (
@@ -173,7 +197,7 @@ export default function DashboardPage() {
                       <div className="text-gray-500">{t('common.loading')}</div>
                     </div>
                   ) : (
-                    <MapView posts={posts} />
+                    <MapView posts={posts} selectedPostId={selectedPostId} onPostUpdated={fetchData} />
                   )}
                 </div>
               </div>
@@ -184,47 +208,74 @@ export default function DashboardPage() {
               <div className="card">
                 <div className="flex items-center gap-2 mb-4">
                   <Users className="w-5 h-5 text-primary" />
-                  <h2 className="text-xl font-semibold text-text">Recent Posts</h2>
+                  <h2 className="text-xl font-semibold text-text">{t('dashboard.recentPosts')}</h2>
                 </div>
                 <div className="space-y-4">
                   {recentPosts.length === 0 ? (
                     <p className="text-sm text-gray-500 text-center py-4">
-                      No posts with locations yet
+                      {t('dashboard.noPostsWithLocations')}
                     </p>
                   ) : (
                     recentPosts.map((post) => (
                       <div
                         key={post._id || post.id}
-                        className="border border-gray-200 rounded-lg p-4 hover:border-primary transition-colors cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleSelectPost(post._id || post.id || '', post.status)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSelectPost(post._id || post.id || '', post.status)}
+                        className={`border rounded-lg p-4 hover:border-primary transition-colors cursor-pointer ${
+                          selectedPostId === (post._id || post.id)
+                            ? 'border-primary ring-2 ring-primary/30'
+                            : 'border-gray-200 dark:border-gray-600'
+                        }`}
                       >
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="font-semibold text-sm text-text line-clamp-1">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-semibold text-sm text-text line-clamp-1 flex-1 min-w-0">
                             {post.title}
                           </h3>
-                          <span
-                            className="px-2 py-0.5 rounded text-xs font-medium"
-                            style={{
-                              backgroundColor: `${
-                                post.status === 'published'
-                                  ? '#16A34A'
-                                  : post.status === 'approved'
-                                    ? '#1E3A8A'
-                                    : post.status === 'pending'
-                                      ? '#F59E0B'
-                                      : '#DC2626'
-                              }20`,
-                              color:
-                                post.status === 'published'
-                                  ? '#16A34A'
-                                  : post.status === 'approved'
-                                    ? '#1E3A8A'
-                                    : post.status === 'pending'
-                                      ? '#F59E0B'
-                                      : '#DC2626',
-                            }}
-                          >
-                            {post.status}
-                          </span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => handleCompletePost(post._id || post.id || '', e)}
+                              disabled={completingPostId === (post._id || post.id) || post.status === 'completed'}
+                              className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-500 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={t('map.markComplete')}
+                            >
+                              {completingPostId === (post._id || post.id) ? (
+                                <span className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Check className="w-4 h-4" />
+                              )}
+                            </button>
+                            <span
+                              className="px-2 py-0.5 rounded text-xs font-medium"
+                              style={{
+                                backgroundColor: `${
+                                  post.status === 'published' || post.status === 'completed'
+                                    ? '#16A34A'
+                                    : post.status === 'approved'
+                                      ? '#1E3A8A'
+                                      : post.status === 'processing'
+                                        ? '#2563EB'
+                                        : post.status === 'pending'
+                                          ? '#F59E0B'
+                                          : '#DC2626'
+                                }20`,
+                                color:
+                                  post.status === 'published' || post.status === 'completed'
+                                    ? '#16A34A'
+                                    : post.status === 'approved'
+                                      ? '#1E3A8A'
+                                      : post.status === 'processing'
+                                        ? '#2563EB'
+                                        : post.status === 'pending'
+                                          ? '#F59E0B'
+                                          : '#DC2626',
+                              }}
+                            >
+                              {post.status ? t(`posts.status.${post.status}`) : post.status}
+                            </span>
+                          </div>
                         </div>
                         {post.content && (
                           <p className="text-xs text-gray-600 mb-2 line-clamp-2">{post.content}</p>
@@ -249,16 +300,22 @@ export default function DashboardPage() {
 
               {/* Quick Actions */}
               <div className="card bg-gradient-to-br from-primary/5 to-primary/10">
-                <h3 className="font-semibold text-text mb-3">Quick Actions</h3>
+                <h3 className="font-semibold text-text mb-3">{t('dashboard.quickActions')}</h3>
                 <div className="space-y-2">
-                  <button className="w-full btn-primary text-left flex items-center gap-2">
+                  <Link
+                    href="/posts/new"
+                    className="w-full btn-primary text-left flex items-center gap-2"
+                  >
                     <FileText className="w-4 h-4" />
-                    Create New Post
-                  </button>
-                  <button className="w-full btn-secondary text-left flex items-center gap-2">
+                    {t('dashboard.createNewPost')}
+                  </Link>
+                  <Link
+                    href="/posts?status=pending"
+                    className="w-full btn-secondary text-left flex items-center gap-2"
+                  >
                     <Clock className="w-4 h-4" />
-                    Review Pending
-                  </button>
+                    {t('dashboard.reviewPending')}
+                  </Link>
                 </div>
               </div>
             </div>

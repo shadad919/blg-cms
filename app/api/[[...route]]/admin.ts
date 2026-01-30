@@ -91,7 +91,7 @@ admin.post(
           sub: adminUser.id,
           email: adminUser.email,
           role: adminUser.role,
-          exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // 24 hours
+          exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // 30 days
         },
         secret
       )

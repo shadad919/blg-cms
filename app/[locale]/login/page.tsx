@@ -69,7 +69,7 @@ export default function LoginPage() {
             <h1 className="text-3xl font-bold text-primary mb-2">
               {t('auth.loginTitle')}
             </h1>
-            <p className="text-gray-600">{t('auth.loginSubtitle')}</p>
+            <p className="text-gray-600 dark:text-gray-300">{t('auth.loginSubtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

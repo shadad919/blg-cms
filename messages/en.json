@@ -28,17 +28,60 @@
   "dashboard": {
     "title": "Dashboard",
     "overview": "Overview",
-    "totalPosts": "Total Posts",
-    "pendingPosts": "Pending Posts",
-    "approvedPosts": "Approved Posts",
-    "publishedPosts": "Published Posts"
+    "totalPosts": "Total Reports",
+    "pendingPosts": "Pending Reports",
+    "approvedPosts": "Approved Reports",
+    "publishedPosts": "Published Reports",
+    "mapTitle": "Reports Location Map",
+    "recentPosts": "Recent Reports",
+    "noPostsWithLocations": "No reports with locations yet",
+    "quickActions": "Quick Actions",
+    "createNewPost": "Create New Report",
+    "reviewPending": "Review Pending",
+    "lastUpdated": "Last updated"
+  },
+  "map": {
+    "filters": "Filters",
+    "categoryLabel": "Category",
+    "statusLabel": "Status",
+    "dateRangeLabel": "Date Range",
+    "clearFilters": "Clear filters",
+    "noPostsMatch": "No reports match the selected filters",
+    "loadingMap": "Loading map...",
+    "showFilters": "Show Filters",
+    "hideFilters": "Hide Filters",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "showingCount": "Showing {count} of {total} reports",
+    "categoryLabelShort": "Category",
+    "statusLabelShort": "Status",
+    "viewDetails": "View Details",
+    "markComplete": "Mark complete",
+    "allCategories": "All Categories",
+    "allTime": "All Time",
+    "today": "Today",
+    "last7Days": "Last 7 Days",
+    "last30Days": "Last 30 Days",
+    "customRange": "Custom Range",
+    "allStatuses": "All Statuses",
+    "categories": {
+      "road": "Road",
+      "electricity": "Electricity",
+      "street_light": "Street Light",
+      "building": "Building",
+      "wall": "Wall",
+      "water": "Water",
+      "mine": "Mine"
+    }
   },
   "posts": {
-    "title": "Posts",
-    "createPost": "Create Post",
-    "editPost": "Edit Post",
-    "deletePost": "Delete Post",
-    "postDetails": "Post Details",
+    "title": "Reports",
+    "backToReports": "Back to Reports",
+    "createPost": "Create Report",
+    "editPost": "Edit Report",
+    "deletePost": "Delete Report",
+    "deleteConfirm": "Are you sure you want to delete this report?",
+    "postDetails": "Report Details",
     "titleLabel": "Title",
     "contentLabel": "Content",
     "statusLabel": "Status",
@@ -48,6 +91,8 @@
     "updatedAtLabel": "Updated At",
     "status": {
       "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
       "approved": "Approved",
       "rejected": "Rejected",
       "published": "Published"
@@ -61,7 +106,27 @@
   },
   "navigation": {
     "dashboard": "Dashboard",
-    "posts": "Posts",
+    "posts": "Reports",
     "settings": "Settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your account and preferences",
+    "language": {
+      "title": "Language",
+      "description": "Choose your preferred language for the interface.",
+      "label": "Interface language"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Customize how the dashboard looks on your device.",
+      "theme": "Theme",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "themeSystem": "System",
+      "primaryColor": "Primary color",
+      "primaryColorDescription": "Choose the main brand color used for buttons, links, and accents."
+    },
+    "saved": "Settings saved"
   }
 }

@@ -8,7 +8,7 @@ export default function middleware(request: NextRequest) {
   // Handle /login and /dashboard redirects to default locale
   const { pathname } = request.nextUrl
   
-  if (pathname === '/login' || pathname === '/dashboard' || pathname === '/posts') {
+  if (pathname === '/login' || pathname === '/dashboard' || pathname === '/posts' || pathname === '/settings') {
     const locale = routing.defaultLocale
     return NextResponse.redirect(new URL(`/${locale}${pathname}`, request.url))
   }
@@ -17,5 +17,5 @@ export default function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/(de|en|ar)/:path*', '/login', '/dashboard', '/posts'],
+  matcher: ['/', '/(de|en|ar)/:path*', '/login', '/dashboard', '/posts', '/settings'],
 }
