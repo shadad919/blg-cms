@@ -182,7 +182,7 @@ export default function PostDetailPage() {
               </div>
               {post.publishedAt && (
                 <div>
-                  <label className="label">Published At</label>
+                  <label className="label">{t('posts.publishedAtLabel')}</label>
                   <p className="text-text dark:text-gray-100">
                     {formatLocaleDate(post.publishedAt, 'PPpp', locale)}
                   </p>
@@ -192,7 +192,7 @@ export default function PostDetailPage() {
 
             {post.tags && post.tags.length > 0 && (
               <div>
-                <label className="label">Tags</label>
+                <label className="label">{t('posts.tagsLabel')}</label>
                 <div className="flex flex-wrap gap-2">
                   {post.tags.map((tag, index) => (
                     <span
@@ -275,12 +275,12 @@ export default function PostDetailPage() {
                     {copied ? (
                       <>
                         <Check className="w-4 h-4" />
-                        <span>Copied!</span>
+                        <span>{t('common.copied')}</span>
                       </>
                     ) : (
                       <>
                         <MapPin className="w-4 h-4" />
-                        <span>Copy Google Maps URL</span>
+                        <span>{t('map.copyGoogleMapsUrl')}</span>
                         <Copy className="w-4 h-4" />
                       </>
                     )}

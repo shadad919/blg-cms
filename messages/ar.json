@@ -17,7 +17,8 @@
     "loading": "جاري التحميل...",
     "error": "خطأ",
     "success": "نجح",
-    "noData": "لا توجد بيانات متاحة"
+    "noData": "لا توجد بيانات متاحة",
+    "copied": "تم النسخ!"
   },
   "auth": {
     "loginTitle": "تسجيل دخول المسؤول",
@@ -57,6 +58,12 @@
     "statusLabelShort": "الحالة",
     "viewDetails": "عرض التفاصيل",
     "markComplete": "تحديد كمكتمل",
+    "authorLabel": "المؤلف",
+    "copyGoogleMapsUrl": "نسخ رابط Google Maps",
+    "addressLabel": "العنوان",
+    "imagesCount": "{count} صورة",
+    "imagesCountLocal": "{count} صورة (محلية)",
+    "view": "عرض",
     "allCategories": "جميع الفئات",
     "allTime": "كل الوقت",
     "today": "اليوم",
@@ -76,6 +83,7 @@
   },
   "posts": {
     "title": "التقارير",
+    "subtitle": "إدارة التقارير من تطبيق أندرويد",
     "backToReports": "العودة إلى التقارير",
     "createPost": "إنشاء تقرير",
     "editPost": "تعديل تقرير",
@@ -89,6 +97,11 @@
     "authorLabel": "المؤلف",
     "createdAtLabel": "تاريخ الإنشاء",
     "updatedAtLabel": "تاريخ التحديث",
+    "publishedAtLabel": "تاريخ النشر",
+    "tagsLabel": "الوسوم",
+    "tagsCommaSeparated": "الوسوم (مفصولة بفاصلة)",
+    "tagsPlaceholder": "وسم1، وسم2، وسم3",
+    "tableCreated": "التاريخ",
     "status": {
       "pending": "معلق",
       "processing": "قيد المعالجة",

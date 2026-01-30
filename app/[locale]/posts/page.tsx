@@ -104,7 +104,7 @@ export default function PostsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-text dark:text-gray-100 mb-2">{t('posts.title')}</h1>
-            <p className="text-gray-600 dark:text-gray-300">Manage posts from Android app</p>
+            <p className="text-gray-600 dark:text-gray-200">{t('posts.subtitle')}</p>
           </div>
           <Link href="/posts/new" className="btn-primary flex items-center gap-2">
             <Plus className="w-4 h-4" />
@@ -130,13 +130,10 @@ export default function PostsPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="input"
             >
-              <option value="">All Status</option>
+              <option value="">{t('map.allStatuses')}</option>
               <option value="pending">{t('posts.status.pending')}</option>
               <option value="processing">{t('posts.status.processing')}</option>
               <option value="completed">{t('posts.status.completed')}</option>
-              <option value="approved">{t('posts.status.approved')}</option>
-              <option value="rejected">{t('posts.status.rejected')}</option>
-              <option value="published">{t('posts.status.published')}</option>
             </select>
           </div>
         </div>
@@ -146,18 +143,18 @@ export default function PostsPage() {
           {loading ? (
             <div className="text-center py-12">{t('common.loading')}</div>
           ) : filteredPosts.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-300">{t('common.noData')}</div>
+            <div className="text-center py-12 text-gray-500 dark:text-gray-200">{t('common.noData')}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-600">
-                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">Title</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">Author</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">Status</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">Priority</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">Created</th>
-                    <th className="text-right py-3 px-4 font-semibold text-text dark:text-gray-100">Actions</th>
+                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">{t('posts.titleLabel')}</th>
+                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">{t('posts.authorLabel')}</th>
+                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">{t('posts.statusLabel')}</th>
+                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">{t('posts.priorityLabel')}</th>
+                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">{t('posts.tableCreated')}</th>
+                    <th className="text-right py-3 px-4 font-semibold text-text dark:text-gray-100">{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -170,17 +167,17 @@ export default function PostsPage() {
                             {(post.title ?? '').trim() || '—'}
                           </div>
                           {(post.content ?? '').trim() && (
-                            <div className="text-sm text-gray-500 dark:text-gray-300 line-clamp-1">
+                            <div className="text-sm text-gray-500 dark:text-gray-200 line-clamp-1">
                               {post.content}
                             </div>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-200">
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-100">
                           {(post.authorName ?? '').trim() || '—'}
                         </td>
                         <td className="py-3 px-4">{getStatusBadge(post.status)}</td>
                         <td className="py-3 px-4">{getPriorityBadge(post.priority)}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-200">
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-100">
                           {formatLocaleDate(post.createdAt, 'PP', locale)}
                         </td>
                         <td className="py-3 px-4">

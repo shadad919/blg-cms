@@ -76,22 +76,22 @@ export function generateArabicMessage(post: {
   
   // Type: Category (in Arabic)
   const categoryAr = getCategoryNameAr(post.category)
-  parts.push(`النوع: ${categoryAr}`)
+  // parts.push(`النوع: ${categoryAr}`)
   
   // Title (if exists)
   if (post.title) {
-    parts.push(`العنوان: ${post.title}`)
+    // parts.push(`العنوان: ${post.title}`)
   }
   
   // Description/Content (if exists)
   if (post.content) {
-    parts.push(`الوصف: ${post.content}`)
+    // parts.push(`الوصف: ${post.content}`)
   }
   
   // Map URL (if location exists)
   if (post.location) {
     const mapUrl = generateGoogleMapsUrl(post.location)
-    parts.push(`رابط الخريطة: ${mapUrl}`)
+    parts.push(`${mapUrl}`)
   }
   
   return parts.join('\n')

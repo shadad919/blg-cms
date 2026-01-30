@@ -17,7 +17,8 @@
     "loading": "Lädt...",
     "error": "Fehler",
     "success": "Erfolg",
-    "noData": "Keine Daten verfügbar"
+    "noData": "Keine Daten verfügbar",
+    "copied": "Kopiert!"
   },
   "auth": {
     "loginTitle": "Admin-Anmeldung",
@@ -57,6 +58,12 @@
     "statusLabelShort": "Status",
     "viewDetails": "Details anzeigen",
     "markComplete": "Als erledigt markieren",
+    "authorLabel": "Autor",
+    "copyGoogleMapsUrl": "Google-Maps-URL kopieren",
+    "addressLabel": "Adresse",
+    "imagesCount": "{count} Bild(er)",
+    "imagesCountLocal": "{count} Bild(er) (lokal)",
+    "view": "Anzeigen",
     "allCategories": "Alle Kategorien",
     "allTime": "Gesamte Zeit",
     "today": "Heute",
@@ -76,6 +83,7 @@
   },
   "posts": {
     "title": "Berichte",
+    "subtitle": "Berichte von der Android-App verwalten",
     "backToReports": "Zurück zu Berichten",
     "createPost": "Bericht erstellen",
     "editPost": "Bericht bearbeiten",
@@ -89,6 +97,11 @@
     "authorLabel": "Autor",
     "createdAtLabel": "Erstellt am",
     "updatedAtLabel": "Aktualisiert am",
+    "publishedAtLabel": "Veröffentlicht am",
+    "tagsLabel": "Tags",
+    "tagsCommaSeparated": "Tags (kommagetrennt)",
+    "tagsPlaceholder": "tag1, tag2, tag3",
+    "tableCreated": "Erstellt",
     "status": {
       "pending": "Ausstehend",
       "processing": "In Bearbeitung",

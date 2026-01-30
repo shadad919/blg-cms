@@ -143,6 +143,7 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
   const locale = (params?.locale as string) || 'en'
   const tMap = useTranslations('map')
   const tPosts = useTranslations('posts')
+  const tCommon = useTranslations('common')
   const [mounted, setMounted] = useState(false)
   const [leafletLoaded, setLeafletLoaded] = useState(false)
   const [L, setL] = useState<any>(null)
@@ -674,15 +675,14 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
                         >
                           <ImageIcon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                           <span>
-                            <span className="font-medium">{urls.length}</span>{' '}
-                            {urls.length === 1 ? 'image' : 'images'} — View
+                            {tMap('imagesCount', { count: urls.length })} — {tMap('view')}
                           </span>
                         </button>
                       ) : (
                         <div className="flex items-center gap-2">
                           <ImageIcon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
                           <span className="text-gray-600 dark:text-gray-300">
-                            <span className="font-medium">{post.images.length}</span> image(s) (local)
+                            {tMap('imagesCountLocal', { count: post.images.length })}
                           </span>
                         </div>
                       )
@@ -690,7 +690,7 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
                     
                     {post.authorName && (
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-700 dark:text-gray-200">Author:</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-200">{tMap('authorLabel')}:</span>
                         <span className="text-gray-600 dark:text-gray-300">{post.authorName}</span>
                       </div>
                     )}
@@ -699,7 +699,7 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
                       <div className="space-y-2">
                         {post.location.address && (
                           <div className="flex items-start gap-2">
-                            <span className="font-medium text-gray-700 dark:text-gray-200">Address:</span>
+                            <span className="font-medium text-gray-700 dark:text-gray-200">{tMap('addressLabel')}:</span>
                             <span className="text-gray-600 dark:text-gray-300 text-[11px] leading-tight">{post.location.address}</span>
                           </div>
                         )}
@@ -710,12 +710,12 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
                           {copiedPostId === (post._id || post.id) ? (
                             <>
                               <Check className="w-3.5 h-3.5" />
-                              <span>Copied!</span>
+                              <span>{tCommon('copied')}</span>
                             </>
                           ) : (
                             <>
                               <MapPin className="w-3.5 h-3.5" />
-                              <span>Copy Google Maps URL</span>
+                              <span>{tMap('copyGoogleMapsUrl')}</span>
                               <Copy className="w-3 h-3" />
                             </>
                           )}

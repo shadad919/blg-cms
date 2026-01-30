@@ -17,7 +17,8 @@
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
-    "noData": "No data available"
+    "noData": "No data available",
+    "copied": "Copied!"
   },
   "auth": {
     "loginTitle": "Admin Login",
@@ -57,6 +58,12 @@
     "statusLabelShort": "Status",
     "viewDetails": "View Details",
     "markComplete": "Mark complete",
+    "authorLabel": "Author",
+    "copyGoogleMapsUrl": "Copy Google Maps URL",
+    "addressLabel": "Address",
+    "imagesCount": "{count} image(s)",
+    "imagesCountLocal": "{count} image(s) (local)",
+    "view": "View",
     "allCategories": "All Categories",
     "allTime": "All Time",
     "today": "Today",
@@ -76,6 +83,7 @@
   },
   "posts": {
     "title": "Reports",
+    "subtitle": "Manage reports from Android app",
     "backToReports": "Back to Reports",
     "createPost": "Create Report",
     "editPost": "Edit Report",
@@ -89,6 +97,11 @@
     "authorLabel": "Author",
     "createdAtLabel": "Created At",
     "updatedAtLabel": "Updated At",
+    "publishedAtLabel": "Published At",
+    "tagsLabel": "Tags",
+    "tagsCommaSeparated": "Tags (comma-separated)",
+    "tagsPlaceholder": "tag1, tag2, tag3",
+    "tableCreated": "Created",
     "status": {
       "pending": "Pending",
       "processing": "Processing",

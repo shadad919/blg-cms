@@ -143,12 +143,12 @@ export default function EditPostPage() {
             </div>
 
             <div>
-              <label className="label">Tags (comma-separated)</label>
+              <label className="label">{t('posts.tagsCommaSeparated')}</label>
               <input
                 type="text"
                 {...register('tags')}
                 className="input"
-                placeholder="tag1, tag2, tag3"
+                placeholder={t('posts.tagsPlaceholder')}
               />
             </div>
 

@@ -147,9 +147,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-text text-gray-900 dark:text-gray-50 mb-2">{t('dashboard.title')}</h1>
-              <p className="text-gray-600 dark:text-gray-300">{t('dashboard.overview')}</p>
+              <p className="text-gray-600 dark:text-gray-200">{t('dashboard.overview')}</p>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-300">
+            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-200">
               <span>{t('dashboard.lastUpdated')}:</span>
               <span className="font-medium">{formatLocaleDate(new Date(), 'MMM d, yyyy HH:mm', locale)}</span>
             </div>
@@ -157,7 +157,7 @@ export default function DashboardPage() {
 
           {/* Stats Cards */}
           {loading ? (
-            <div className="text-center py-12 text-gray-600 dark:text-gray-300">{t('common.loading')}</div>
+            <div className="text-center py-12 text-gray-600 dark:text-gray-200">{t('common.loading')}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {statCards.map((card, index) => {
@@ -174,7 +174,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">{card.title}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-200 mb-1">{card.title}</p>
                       <p className="text-3xl font-bold text-gray-900 dark:text-gray-50">{card.value}</p>
                     </div>
                   </div>
@@ -213,7 +213,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-4">
                   {recentPosts.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-4">
+                    <p className="text-sm text-gray-500 dark:text-gray-200 text-center py-4">
                       {t('dashboard.noPostsWithLocations')}
                     </p>
                   ) : (
@@ -279,10 +279,10 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         {post.content && (
-                          <p className="text-xs text-gray-600 mb-2 line-clamp-2">{post.content}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-200 mb-2 line-clamp-2">{post.content}</p>
                         )}
                         {post.location && (
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-200">
                             <MapPin className="w-3 h-3" />
                             <span>
                               {post.location.address ||
@@ -290,7 +290,7 @@ export default function DashboardPage() {
                             </span>
                           </div>
                         )}
-                        <div className="text-xs text-gray-400 mt-2">
+                        <div className="text-xs text-gray-400 dark:text-gray-300 mt-2">
                           {formatLocaleDate(post.createdAt, 'MMM d, yyyy', locale)}
                         </div>
                       </div>
