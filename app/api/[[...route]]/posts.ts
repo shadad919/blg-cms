@@ -17,7 +17,7 @@ async function reverseGeocodeServer(
   if (!GEOPROXY_KEY) return null
   try {
     const q = `${lat}+${lng}`
-    const url = `https://www.gps-coordinates.net/geoproxy?q=${encodeURIComponent(q)}&key=${GEOPROXY_KEY}&no_annotations=1&language=${language}`
+    const url = `https://www.gps-coordinates.net/geoproxy?q=${encodeURIComponent(q)}&key=9416bf2c8b1d4751be6a9a9e94ea85ca&no_annotations=1&language=${language}`
     const res = await fetch(url)
     const data = await res.json();
     console.log('address data:', data)
