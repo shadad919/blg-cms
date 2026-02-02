@@ -36,6 +36,7 @@ const IMAGE_EXT_MAP: Record<string, string> = {
   'image/webp': 'webp',
   'image/gif': 'gif',
 }
+//
 
 function getExtensionFromBase64(base64: string): string {
   const match = base64.match(/^data:image\/(\w+);base64,/)
