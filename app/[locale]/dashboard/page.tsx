@@ -7,7 +7,7 @@ import api from '@/lib/api'
 import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import MapView from '@/components/MapView'
-import { FileText, Clock, CheckCircle, Globe, MapPin, TrendingUp, Users, Check } from 'lucide-react'
+import { FileText, Clock, CheckCircle, Globe, MapPin, TrendingUp, Users, Check, ChevronLeft, ChevronRight, XCircle } from 'lucide-react'
 import { Post } from '@/lib/types'
 import { formatLocaleDate } from '@/lib/date-locale'
 import { dummyPosts } from '@/lib/dummyData'
@@ -34,6 +34,12 @@ export default function DashboardPage() {
   const [mapLoading, setMapLoading] = useState(true)
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
   const [completingPostId, setCompletingPostId] = useState<string | null>(null)
+  const [rejectModalOpen, setRejectModalOpen] = useState(false)
+  const [rejectPostId, setRejectPostId] = useState<string | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+  const [rejectingPostId, setRejectingPostId] = useState<string | null>(null)
+  const POSTS_PER_PAGE = 5
+  const [currentPage, setCurrentPage] = useState(1)
 
   const fetchData = async () => {
       try {
@@ -80,7 +86,7 @@ export default function DashboardPage() {
 
   const handleSelectPost = async (postId: string, status?: string) => {
     setSelectedPostId(postId)
-    if (status === 'completed' || status === 'processing') return
+    if (status === 'completed' || status === 'processing' || status === 'rejected') return
     try {
       await api.patch(`/posts/${postId}`, { status: 'processing' })
       await fetchData()
@@ -100,6 +106,38 @@ export default function DashboardPage() {
       console.error('Failed to complete post:', e)
     } finally {
       setCompletingPostId(null)
+    }
+  }
+
+  const openRejectModal = (postId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setRejectPostId(postId)
+    setRejectReason('')
+    setRejectModalOpen(true)
+  }
+
+  const closeRejectModal = () => {
+    setRejectModalOpen(false)
+    setRejectPostId(null)
+    setRejectReason('')
+    setRejectingPostId(null)
+  }
+
+  const handleConfirmReject = async () => {
+    if (!rejectPostId) return
+    setRejectingPostId(rejectPostId)
+    try {
+      await api.patch(`/posts/${rejectPostId}`, {
+        status: 'rejected',
+        rejectionReason: rejectReason.trim() || undefined,
+      })
+      await fetchData()
+      closeRejectModal()
+    } catch (e) {
+      console.error('Failed to reject post:', e)
+    } finally {
+      setRejectingPostId(null)
     }
   }
 
@@ -134,10 +172,17 @@ export default function DashboardPage() {
     },
   ]
 
-  const recentPosts = posts
-    .filter((post) => post.location && post.location.latitude && post.location.longitude)
-    .slice(0, 5)
+  const postsWithLocation = posts
+    .filter((post) => post.location && post.location.latitude && post.location.longitude && post.status !== 'rejected')
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+  const totalPages = Math.max(1, Math.ceil(postsWithLocation.length / POSTS_PER_PAGE))
+  const pageStart = (currentPage - 1) * POSTS_PER_PAGE
+  const recentPosts = postsWithLocation.slice(pageStart, pageStart + POSTS_PER_PAGE)
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(1)
+  }, [currentPage, totalPages])
 
   return (
     <ProtectedRoute>
@@ -231,7 +276,7 @@ export default function DashboardPage() {
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="font-semibold text-sm text-text line-clamp-1 flex-1 min-w-0">
+                          <h3 className="font-semibold text-sm dark:text-white text-text line-clamp-1 flex-1 min-w-0">
                             {post.title}
                           </h3>
                           <div className="flex items-center gap-1 shrink-0">
@@ -247,6 +292,15 @@ export default function DashboardPage() {
                               ) : (
                                 <Check className="w-4 h-4" />
                               )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => openRejectModal(post._id || post.id || '', e)}
+                              disabled={post.status === 'rejected'}
+                              className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={t('posts.rejectPost')}
+                            >
+                              <XCircle className="w-4 h-4" />
                             </button>
                             <span
                               className="px-2 py-0.5 rounded text-xs font-medium"
@@ -297,19 +351,44 @@ export default function DashboardPage() {
                     ))
                   )}
                 </div>
+                {postsWithLocation.length > POSTS_PER_PAGE && (
+                  <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-600">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage <= 1}
+                      className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      {t('common.previous')}
+                    </button>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      {t('common.pageOf', { current: currentPage, total: totalPages })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage >= totalPages}
+                      className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {t('common.next')}
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Quick Actions */}
               <div className="card bg-gradient-to-br from-primary/5 to-primary/10">
-                <h3 className="font-semibold text-text mb-3">{t('dashboard.quickActions')}</h3>
+                <h3 className="font-semibold text-text dark:text-white mb-3">{t('dashboard.quickActions')}</h3>
                 <div className="space-y-2">
-                  <Link
+                  {/* <Link
                     href="/posts/new"
                     className="w-full btn-primary text-left flex items-center gap-2"
                   >
                     <FileText className="w-4 h-4" />
                     {t('dashboard.createNewPost')}
-                  </Link>
+                  </Link> */}
                   <Link
                     href="/posts?status=pending"
                     className="w-full btn-secondary text-left flex items-center gap-2"
@@ -322,6 +401,60 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Reject confirmation modal */}
+        {rejectModalOpen && (
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reject-modal-title"
+            onClick={() => !rejectingPostId && closeRejectModal()}
+          >
+            <div
+              className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-xl p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="reject-modal-title" className="text-lg font-semibold text-text dark:text-white mb-2">
+                {t('posts.rejectConfirmTitle')}
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                {t('posts.rejectConfirmMessage')}
+              </p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                {t('posts.rejectionReasonLabel')}
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder={t('posts.rejectionReasonPlaceholder')}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-text dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                rows={3}
+              />
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={closeRejectModal}
+                  disabled={!!rejectingPostId}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmReject}
+                  disabled={!!rejectingPostId}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {rejectingPostId ? (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : null}
+                  {t('posts.confirmReject')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </Layout>
     </ProtectedRoute>
   )

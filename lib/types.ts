@@ -72,6 +72,7 @@ export interface Post {
   publishedAt?: string
   reviewedBy?: string // Admin ID who reviewed
   reviewedAt?: string
+  rejectionReason?: string
 }
 
 // Auth types

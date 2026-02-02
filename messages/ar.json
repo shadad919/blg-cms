@@ -18,7 +18,10 @@
     "error": "خطأ",
     "success": "نجح",
     "noData": "لا توجد بيانات متاحة",
-    "copied": "تم النسخ!"
+    "copied": "تم النسخ!",
+    "previous": "السابق",
+    "next": "التالي",
+    "pageOf": "صفحة {current} من {total}"
   },
   "auth": {
     "loginTitle": "تسجيل دخول المسؤول",
@@ -38,7 +41,7 @@
     "noPostsWithLocations": "لا توجد تقارير بمواقع بعد",
     "quickActions": "إجراءات سريعة",
     "createNewPost": "إنشاء تقرير جديد",
-    "reviewPending": "مراجعة المعلقة",
+    "reviewPending": "مراجعة  التقارير المعلقة",
     "lastUpdated": "آخر تحديث"
   },
   "map": {
@@ -60,6 +63,8 @@
     "markComplete": "تحديد كمكتمل",
     "authorLabel": "المؤلف",
     "copyGoogleMapsUrl": "نسخ رابط Google Maps",
+    "showOnMap": "عرض على الخريطة",
+    "locationMapTitle": "الموقع على الخريطة",
     "addressLabel": "العنوان",
     "imagesCount": "{count} صورة",
     "imagesCountLocal": "{count} صورة (محلية)",
@@ -88,6 +93,12 @@
     "createPost": "إنشاء تقرير",
     "editPost": "تعديل تقرير",
     "deletePost": "حذف تقرير",
+    "rejectPost": "رفض التقرير",
+    "rejectConfirmTitle": "رفض هذا التقرير؟",
+    "rejectConfirmMessage": "سيتم وضع التقرير كمرفوض. يمكنك إضافة سبب اختياري أدناه.",
+    "rejectionReasonLabel": "سبب الرفض",
+    "rejectionReasonPlaceholder": "مثال: مكرر، تفاصيل غير كافية، خارج النطاق...",
+    "confirmReject": "رفض",
     "deleteConfirm": "هل أنت متأكد من حذف هذا التقرير؟",
     "postDetails": "تفاصيل التقرير",
     "titleLabel": "العنوان",
@@ -120,6 +131,7 @@
   "navigation": {
     "dashboard": "لوحة التحكم",
     "posts": "التقارير",
+    "menuTitle": "القائمة الرئيسية",
     "settings": "الإعدادات"
   },
   "settings": {

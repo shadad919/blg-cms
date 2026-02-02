@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -12,9 +12,9 @@ import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
 
 const postSchema = z.object({
-  title: z.string().min(1),
-  content: z.string().min(1),
-  status: z.enum(['pending', 'approved', 'rejected', 'published']),
+  title: z.string().optional(),
+  content: z.string().optional(),
+  status: z.enum(['pending', 'processing', 'completed', 'rejected']),
   priority: z.enum(['low', 'medium', 'high', 'critical']),
   tags: z.string().optional(),
 })
@@ -23,6 +23,7 @@ type PostForm = z.infer<typeof postSchema>
 
 export default function EditPostPage() {
   const t = useTranslations()
+  const locale = useLocale()
   const params = useParams()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -44,7 +45,7 @@ export default function EditPostPage() {
   const fetchPost = async () => {
     try {
       const response = await api.get(`/posts/${params.id}`)
-      const post = response.data.result
+      const post = response.result 
       setValue('title', post.title)
       setValue('content', post.content)
       setValue('status', post.status)
@@ -62,10 +63,11 @@ export default function EditPostPage() {
     try {
       const updateData = {
         ...data,
+        description: data.content ?? "",
         tags: data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
       }
       await api.patch(`/posts/${params.id}`, updateData)
-      router.push(`/posts/${params.id}`)
+      router.push(`/${locale}/posts/${params.id}`)
     } catch (error) {
       console.error('Error updating post:', error)
     } finally {
@@ -125,9 +127,9 @@ export default function EditPostPage() {
                 <label className="label">{t('posts.statusLabel')}</label>
                 <select {...register('status')} className="input">
                   <option value="pending">{t('posts.status.pending')}</option>
-                  <option value="approved">{t('posts.status.approved')}</option>
+                  <option value="processing">{t('posts.status.processing')}</option>
+                  <option value="completed">{t('posts.status.completed')}</option>
                   <option value="rejected">{t('posts.status.rejected')}</option>
-                  <option value="published">{t('posts.status.published')}</option>
                 </select>
               </div>
 

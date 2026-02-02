@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import api from '@/lib/api'
 import Layout from '@/components/Layout'
@@ -32,14 +32,16 @@ export default function PostsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('')
 
   useEffect(() => {
-    fetchPosts()
-  }, [statusFilter])
+    const status = new URLSearchParams(window.location.search).get('status')
+    if (status) setStatusFilter(status)
+  }, [])
 
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
+    setLoading(true)
     try {
-      const params: Record<string, string> = { limit: '50' }
+      const params: Record<string, string> = { limit: '100' }
       if (statusFilter) params.status = statusFilter
-      if (search) params.search = search
+      if (search.trim()) params.search = search.trim()
 
       const queryParams = new URLSearchParams(params).toString()
       const response = await api.get(`/posts?${queryParams}`)
@@ -51,7 +53,13 @@ export default function PostsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter, search])
+
+  useEffect(() => {
+    const delay = search.trim() ? 400 : 0
+    const timer = setTimeout(() => fetchPosts(), delay)
+    return () => clearTimeout(timer)
+  }, [statusFilter, search, fetchPosts])
 
   const handleDelete = async (id: string) => {
     if (!confirm(t('posts.deleteConfirm'))) return
@@ -88,14 +96,8 @@ export default function PostsPage() {
     return <span className={priorityInfo.className}>{priorityInfo.label}</span>
   }
 
-  const filteredPosts = posts.filter((post) => {
-    if (!search) return true
-    const searchLower = search.toLowerCase()
-    const title = (post.title ?? '').toLowerCase()
-    const content = (post.content ?? '').toLowerCase()
-    const author = (post.authorName ?? '').toLowerCase()
-    return title.includes(searchLower) || content.includes(searchLower) || author.includes(searchLower)
-  })
+  // When using API search, posts are already filtered; client filter only when not sending search
+  const filteredPosts = posts
 
   return (
     <ProtectedRoute>
@@ -106,10 +108,10 @@ export default function PostsPage() {
             <h1 className="text-3xl font-bold text-text dark:text-gray-100 mb-2">{t('posts.title')}</h1>
             <p className="text-gray-600 dark:text-gray-200">{t('posts.subtitle')}</p>
           </div>
-          <Link href="/posts/new" className="btn-primary flex items-center gap-2">
+          {/* <Link href="/posts/new" className="btn-primary flex items-center gap-2">
             <Plus className="w-4 h-4" />
             {t('posts.createPost')}
-          </Link>
+          </Link> */}
         </div>
 
         {/* Filters */}
@@ -128,75 +130,82 @@ export default function PostsPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="input"
+              className="input min-w-[140px]"
             >
               <option value="">{t('map.allStatuses')}</option>
               <option value="pending">{t('posts.status.pending')}</option>
               <option value="processing">{t('posts.status.processing')}</option>
               <option value="completed">{t('posts.status.completed')}</option>
+              {/* <option value="approved">{t('posts.status.approved')}</option> */}
+              <option value="rejected">{t('posts.status.rejected')}</option>
+              {/* <option value="published">{t('posts.status.published')}</option> */}
             </select>
           </div>
         </div>
 
         {/* Posts Table */}
-        <div className="card">
+        <div className="card p-0 overflow-hidden">
           {loading ? (
-            <div className="text-center py-12">{t('common.loading')}</div>
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
           ) : filteredPosts.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-200">{t('common.noData')}</div>
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.noData')}</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[640px] table-fixed border-collapse">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-600">
-                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">{t('posts.titleLabel')}</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">{t('posts.authorLabel')}</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">{t('posts.statusLabel')}</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">{t('posts.priorityLabel')}</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text dark:text-gray-100">{t('posts.tableCreated')}</th>
-                    <th className="text-right py-3 px-4 font-semibold text-text dark:text-gray-100">{t('common.actions')}</th>
+                  <tr className="border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50">
+                    <th className="text-start py-3 px-4 font-semibold text-text dark:text-gray-100 whitespace-nowrap w-[28%]">{t('posts.titleLabel')}</th>
+                    <th className="text-start py-3 px-4 font-semibold text-text dark:text-gray-100 whitespace-nowrap w-[14%]">{t('posts.authorLabel')}</th>
+                    <th className="text-start py-3 px-4 font-semibold text-text dark:text-gray-100 whitespace-nowrap w-[12%]">{t('posts.statusLabel')}</th>
+                    <th className="text-start py-3 px-4 font-semibold text-text dark:text-gray-100 whitespace-nowrap w-[12%]">{t('posts.priorityLabel')}</th>
+                    <th className="text-start py-3 px-4 font-semibold text-text dark:text-gray-100 whitespace-nowrap w-[14%]">{t('posts.tableCreated')}</th>
+                    <th className="text-end py-3 px-4 font-semibold text-text dark:text-gray-100 whitespace-nowrap w-[20%]">{t('common.actions')}</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                   {filteredPosts.map((post) => {
                     const postId = post._id ?? post.id ?? ''
                     return (
-                      <tr key={postId} className="border-b border-gray-100 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="py-3 px-4">
-                          <div className="font-medium text-text dark:text-gray-100">
+                      <tr key={postId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <td className="py-3 px-4 align-top text-start">
+                          <div className="font-medium text-text dark:text-gray-100 truncate text-start min-w-0" title={(post.title ?? '').trim() || undefined}>
                             {(post.title ?? '').trim() || '—'}
                           </div>
                           {(post.content ?? '').trim() && (
-                            <div className="text-sm text-gray-500 dark:text-gray-200 line-clamp-1">
+                            <div className="text-sm text-gray-500 dark:text-gray-400 truncate text-start min-w-0" title={String(post.content).slice(0, 100)}>
                               {post.content}
                             </div>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-100">
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap truncate align-top text-start min-w-0" title={(post.authorName ?? '').trim() || undefined}>
                           {(post.authorName ?? '').trim() || '—'}
                         </td>
-                        <td className="py-3 px-4">{getStatusBadge(post.status)}</td>
-                        <td className="py-3 px-4">{getPriorityBadge(post.priority)}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-100">
+                        <td className="py-3 px-4 whitespace-nowrap align-top text-start">{getStatusBadge(post.status)}</td>
+                        <td className="py-3 px-4 whitespace-nowrap align-top text-start">{getPriorityBadge(post.priority)}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap align-top text-start">
                           {formatLocaleDate(post.createdAt, 'PP', locale)}
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="py-3 px-4 align-top text-end">
+                          <div className="flex items-center justify-end gap-1 shrink-0">
                             <Link
                               href={`/posts/${postId}`}
                               className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                              title={t('posts.postDetails')}
                             >
                               <Eye className="w-4 h-4" />
                             </Link>
                             <Link
                               href={`/posts/${postId}/edit`}
                               className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                              title={t('posts.editPost')}
                             >
                               <Edit className="w-4 h-4" />
                             </Link>
                             <button
+                              type="button"
                               onClick={() => handleDelete(postId)}
                               className="p-2 text-critical hover:bg-critical/10 rounded-lg transition-colors"
+                              title={t('posts.deletePost')}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>

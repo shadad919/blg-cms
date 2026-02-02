@@ -18,7 +18,10 @@
     "error": "Error",
     "success": "Success",
     "noData": "No data available",
-    "copied": "Copied!"
+    "copied": "Copied!",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {current} of {total}"
   },
   "auth": {
     "loginTitle": "Admin Login",
@@ -60,6 +63,8 @@
     "markComplete": "Mark complete",
     "authorLabel": "Author",
     "copyGoogleMapsUrl": "Copy Google Maps URL",
+    "showOnMap": "Show on map",
+    "locationMapTitle": "Location on map",
     "addressLabel": "Address",
     "imagesCount": "{count} image(s)",
     "imagesCountLocal": "{count} image(s) (local)",
@@ -89,6 +94,12 @@
     "editPost": "Edit Report",
     "deletePost": "Delete Report",
     "deleteConfirm": "Are you sure you want to delete this report?",
+    "rejectPost": "Reject report",
+    "rejectConfirmTitle": "Reject this report?",
+    "rejectConfirmMessage": "This will mark the report as rejected. You can provide a reason below (optional).",
+    "rejectionReasonLabel": "Rejection reason",
+    "rejectionReasonPlaceholder": "e.g. Duplicate, insufficient details, out of scope...",
+    "confirmReject": "Reject",
     "postDetails": "Report Details",
     "titleLabel": "Title",
     "contentLabel": "Content",
@@ -120,6 +131,7 @@
   "navigation": {
     "dashboard": "Dashboard",
     "posts": "Reports",
+    "menuTitle": "Main Menu",
     "settings": "Settings"
   },
   "settings": {

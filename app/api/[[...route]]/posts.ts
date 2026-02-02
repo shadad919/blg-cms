@@ -7,6 +7,28 @@ import { ApiResponse, Post, PaginatedResponse, PostStatus, PostPriority } from '
 import { authenticateAdmin, getCurrentAdmin } from '@/lib/auth-middleware'
 import { getCategoriesCollection, getPostsCollection, getUsersCollection } from '@/lib/mongodb'
 
+const GEOPROXY_KEY = process.env.GEOPROXY_KEY ?? process.env.NEXT_PUBLIC_GEOPROXY_KEY
+
+async function reverseGeocodeServer(
+  lat: number,
+  lng: number,
+  language: string = 'en'
+): Promise<string | null> {
+  if (!GEOPROXY_KEY) return null
+  try {
+    const q = `${lat}+${lng}`
+    const url = `https://www.gps-coordinates.net/geoproxy?q=${encodeURIComponent(q)}&key=${GEOPROXY_KEY}&no_annotations=1&language=${language}`
+    const res = await fetch(url)
+    const data = await res.json();
+    console.log('address data:', data)
+    if (data.status?.code !== 200 || !Array.isArray(data.results) || data.results.length === 0) return null
+    return data.results[0].formatted ?? null
+  } catch (err) {
+    console.error('Reverse geocode error:', err)
+    return null
+  }
+}
+
 const IMAGE_EXT_MAP: Record<string, string> = {
   'image/jpeg': 'jpeg',
   'image/jpg': 'jpg',
@@ -55,7 +77,7 @@ function convertToPost(doc: any): Post {
     _id: doc._id.toString(),
     id: doc._id.toString(),
     title: doc.title,
-    content: doc.content,
+    content: doc.content ?? "",
     authorId: doc.authorId,
     authorName: doc.authorName,
     status: doc.status,
@@ -70,6 +92,7 @@ function convertToPost(doc: any): Post {
     publishedAt: doc.publishedAt,
     reviewedBy: doc.reviewedBy,
     reviewedAt: doc.reviewedAt,
+    rejectionReason: doc.rejectionReason,
   }
 }
 
@@ -102,9 +125,10 @@ const createPostSchema = z.object({
 
 // Post update schema
 const updatePostSchema = z.object({
-  title: z.string().min(1).optional(),
-  content: z.string().min(1).optional(),
-  status: z.enum(['pending', 'processing', 'completed', 'approved', 'rejected', 'published']).optional(),
+  title: z.string().optional(),
+  content: z.string().optional(),
+  status: z.enum(['pending', 'processing', 'completed', 'rejected']).optional(),
+  rejectionReason: z.string().optional(),
   category: z.enum(['road', 'electricity', 'street_light', 'building', 'wall', 'water', 'mine']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
   tags: z.array(z.string()).optional(),
@@ -338,9 +362,14 @@ posts.post(
       }
 
       const now = new Date().toISOString()
+      let location = data.location
+      if (location && typeof location.latitude === 'number' && typeof location.longitude === 'number') {
+        const address = location.address?.trim() || (await reverseGeocodeServer(location.latitude, location.longitude))
+        location = { ...location, address: address ?? location.address ?? undefined }
+      }
       const newPostDoc = {
         title: data.title,
-        content: data.content,
+        content: data.content ?? "",
         authorId: data.authorId,
         authorName: data.authorName,
         status: 'pending' as PostStatus,
@@ -348,7 +377,7 @@ posts.post(
         tags: data.tags || [],
         images: uploadedImages,
         category: data.category,
-        location: data.location,
+        location,
         createdAt: now,
         updatedAt: now,
       }
@@ -427,12 +456,23 @@ posts.patch(
         updatedAt: new Date().toISOString(),
       }
 
+      // Resolve address from coordinates when location is provided without address
+      if (update.location && typeof update.location.latitude === 'number' && typeof update.location.longitude === 'number' && !update.location.address?.trim()) {
+        const address = await reverseGeocodeServer(update.location.latitude, update.location.longitude)
+        if (address) update.location = { ...update.location, address }
+      }
+
       // If status changed to approved/published, set reviewed info
-      if (data.status && ['approved', 'published'].includes(data.status)) {
+      if (data.status && ['processing', 'completed'].includes(data.status)) {
         update.reviewedBy = currentAdmin.id
         update.reviewedAt = new Date().toISOString()
-        if (data.status === 'published') {
-          update.publishedAt = new Date().toISOString()
+      }
+      // If status changed to rejected, set reviewed info and rejection reason
+      if (data.status === 'rejected') {
+        update.reviewedBy = currentAdmin.id
+        update.reviewedAt = new Date().toISOString()
+        if (data.rejectionReason != null) {
+          update.rejectionReason = data.rejectionReason
         }
       }
 

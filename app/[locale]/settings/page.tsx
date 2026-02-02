@@ -21,7 +21,6 @@ const PRIMARY_PRESETS = [
 
 const LOCALE_OPTIONS = [
   { value: 'en' as const, label: 'English' },
-  { value: 'de' as const, label: 'Deutsch' },
   { value: 'ar' as const, label: 'العربية' },
 ]
 
@@ -34,7 +33,7 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
 
   const handleLocaleChange = (locale: string) => {
-    router.replace(pathname || '/dashboard', { locale: locale as 'en' | 'de' | 'ar' })
+    router.replace(pathname || '/dashboard', { locale: locale as 'en' | 'ar' })
   }
 
   const handleThemeChange = (newTheme: Theme) => {

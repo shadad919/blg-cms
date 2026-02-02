@@ -1,15 +1,13 @@
 import { format, type Locale } from 'date-fns'
-import {ar} from 'date-fns/locale/ar'
-import {de} from 'date-fns/locale/de'
-import {enUS} from 'date-fns/locale/en-US'
+import { ar } from 'date-fns/locale/ar'
+import { enUS } from 'date-fns/locale/en-US'
 
 const localeMap: Record<string, Locale> = {
   ar,
-  de,
   en: enUS,
 }
 
-/** Map next-intl locale (e.g. 'ar', 'en', 'de') to date-fns Locale */
+/** Map next-intl locale (e.g. 'ar', 'en') to date-fns Locale */
 export function getDateFnsLocale(locale: string): Locale {
   return localeMap[locale] ?? enUS
 }

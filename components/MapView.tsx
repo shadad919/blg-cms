@@ -28,6 +28,9 @@ const MapContainer = dynamic(
   { ssr: false }
 )
 
+// Survives unmount/remount (e.g. Strict Mode) so remount gets a new container key
+let nextMapId = 0
+
 const TileLayer = dynamic(
   () => import('react-leaflet').then((mod) => mod.TileLayer),
   { ssr: false }
@@ -146,8 +149,9 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
   const tCommon = useTranslations('common')
   const [mounted, setMounted] = useState(false)
   const [leafletLoaded, setLeafletLoaded] = useState(false)
+  const [mapReady, setMapReady] = useState(false)
+  const [mapContainerKey, setMapContainerKey] = useState('')
   const [L, setL] = useState<any>(null)
-  const [mapKey] = useState(() => `map-${typeof window !== 'undefined' ? window.performance.now() : Date.now()}-${Math.random().toString(36).slice(2)}`)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [selectedDateRange, setSelectedDateRange] = useState<string>('all')
@@ -219,9 +223,9 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
       { value: 'pending', label: tPosts('status.pending') },
       { value: 'processing', label: tPosts('status.processing') },
       { value: 'completed', label: tPosts('status.completed') },
-      { value: 'approved', label: tPosts('status.approved') },
+      // { value: 'approved', label: tPosts('status.approved') },
       { value: 'rejected', label: tPosts('status.rejected') },
-      { value: 'published', label: tPosts('status.published') },
+      // { value: 'published', label: tPosts('status.published') },
     ],
     [tMap, tPosts]
   )
@@ -244,6 +248,25 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
     }
   }, [])
 
+  // Defer map render until after first commit so Strict Mode doesn't double-mount
+  useEffect(() => {
+    if (!mounted || !leafletLoaded) return
+    const id = requestAnimationFrame(() => setMapReady(true))
+    return () => {
+      cancelAnimationFrame(id)
+      setMapReady(false)
+    }
+  }, [mounted, leafletLoaded])
+
+  // When we show the map, assign a key from module id; on unmount bump id so remount gets fresh container
+  useEffect(() => {
+    if (!mapReady) return
+    setMapContainerKey(`map-${nextMapId}`)
+    return () => {
+      nextMapId += 1
+    }
+  }, [mapReady])
+
   // Filter posts based on category, status, and date
   const filteredPosts = useMemo(() => {
     let filtered = posts.filter(
@@ -255,9 +278,11 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
       filtered = filtered.filter((post) => post.category === selectedCategory)
     }
 
-    // Filter by status
+    // Filter by status: when "all", exclude rejected (show rejected only when filtering by rejected)
     if (selectedStatus !== 'all') {
       filtered = filtered.filter((post) => post.status === selectedStatus)
+    } else {
+      filtered = filtered.filter((post) => post.status !== 'rejected')
     }
 
     // Filter by date range
@@ -293,7 +318,6 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
         return postDate >= startDate && postDate <= endDate
       })
     }
-    console.log('filtered',filtered)
     return filtered
   }, [posts, selectedCategory, selectedStatus, selectedDateRange, customStartDate, customEndDate])
 
@@ -576,14 +600,15 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
         )}
       </div>
 
-      <MapContainer
-        key={mapKey}
-        center={center}
-        zoom={zoom}
-        style={{ height: '100%', width: '100%' }}
-        scrollWheelZoom={true}
-      >
-        <TileLayer
+      {mapReady && mapContainerKey ? (
+      <div key={mapContainerKey} style={{ height: '100%', width: '100%' }}>
+        <MapContainer
+          center={center}
+          zoom={zoom}
+          style={{ height: '100%', width: '100%' }}
+          scrollWheelZoom={true}
+        >
+          <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
@@ -734,7 +759,13 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
             </MarkerWithPopupOpen>
           )
         })}
-      </MapContainer>
+        </MapContainer>
+      </div>
+      ) : (
+        <div className="w-full h-full min-h-[400px] bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+          <p className="text-gray-500 dark:text-gray-300">{tMap('loadingMap')}</p>
+        </div>
+      )}
 
       <ImageModal
         open={imageViewerOpen}

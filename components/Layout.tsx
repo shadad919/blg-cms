@@ -83,7 +83,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <aside className="hidden md:flex w-56 flex-col border-r border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 min-h-[calc(100vh-4rem)]">
           <nav className="flex-1 p-4 space-y-1">
             <p className="px-3 mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Menu
+              {t('navigation.menuTitle')}
             </p>
             {navItems.map((item) => {
               const Icon = item.icon

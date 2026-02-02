@@ -17,5 +17,5 @@ export default function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/(de|en|ar)/:path*', '/login', '/dashboard', '/posts', '/settings'],
+  matcher: ['/', '/(en|ar)/:path*', '/login', '/dashboard', '/posts', '/settings'],
 }
