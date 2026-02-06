@@ -5,7 +5,8 @@ import { ObjectId } from 'mongodb'
 import { put } from '@vercel/blob'
 import { ApiResponse, Post, PaginatedResponse, PostStatus, PostPriority } from '@/lib/types'
 import { authenticateAdmin, getCurrentAdmin } from '@/lib/auth-middleware'
-import { getCategoriesCollection, getPostsCollection, getUsersCollection } from '@/lib/mongodb'
+import { getCategoriesCollection, getPostsCollection, getUsersCollection, getSettingsCollection } from '@/lib/mongodb'
+import { sendWhatsAppMessage } from '@/lib/whatsapp'
 
 const GEOPROXY_KEY = process.env.GEOPROXY_KEY ?? process.env.NEXT_PUBLIC_GEOPROXY_KEY
 
@@ -156,8 +157,12 @@ posts.get('/', async (c) => {
     const page = Number(c.req.query('page')) || 1
     const limit = Number(c.req.query('limit')) || 10
     const search = c.req.query('search') || ''
-    const status = c.req.query('status') as PostStatus | undefined
+    const status = c.req.query('status') as string | undefined
     const priority = c.req.query('priority') as PostPriority | undefined
+    const category = c.req.query('category') as string | undefined
+    const startDate = c.req.query('startDate') as string | undefined
+    const endDate = c.req.query('endDate') as string | undefined
+    const hasLocation = c.req.query('hasLocation') === 'true'
     const sortBy = c.req.query('sortBy') || 'createdAt'
     const sortOrder = c.req.query('sortOrder') === 'asc' ? 1 : -1
 
@@ -174,12 +179,30 @@ posts.get('/', async (c) => {
       ]
     }
 
-    if (status) {
+    // Status: missing or 'all' => exclude rejected; otherwise filter by status
+    if (status && status !== 'all') {
       filter.status = status
+    } else {
+      filter.status = { $ne: 'rejected' }
     }
 
     if (priority) {
       filter.priority = priority
+    }
+
+    if (category && category !== 'all') {
+      filter.category = category
+    }
+
+    if (startDate || endDate) {
+      filter.createdAt = {}
+      if (startDate) filter.createdAt.$gte = new Date(startDate)
+      if (endDate) filter.createdAt.$lte = new Date(endDate)
+    }
+
+    if (hasLocation) {
+      filter['location.latitude'] = { $exists: true, $ne: null }
+      filter['location.longitude'] = { $exists: true, $ne: null }
     }
 
     // Get total count
@@ -213,6 +236,10 @@ posts.get('/', async (c) => {
             search,
             status,
             priority,
+            category,
+            startDate,
+            endDate,
+            hasLocation,
             sortBy,
             sortOrder: sortOrder === 1 ? 'asc' : 'desc',
           },
@@ -490,6 +517,28 @@ posts.patch(
       // Fetch updated document
       const updatedDoc = await collection.findOne(query)
       const updatedPost = convertToPost(updatedDoc!)
+
+      // When status is set to processing, send WhatsApp to the category's linked number (callable function, no separate API)
+      if (data.status === 'processing') {
+        const category = updatedDoc?.category ?? existingDoc?.category
+        if (category) {
+          try {
+            const settingsCol = await getSettingsCollection()
+            const whatsappDoc = await settingsCol.findOne({ name: 'whatsapp_settings' })
+            const categorySetting = whatsappDoc?.categories?.[category as keyof typeof whatsappDoc.categories]
+            if (categorySetting?.linked && categorySetting?.phone?.trim()) {
+              const message = await sendWhatsAppMessage({
+                to: categorySetting.phone.trim(),
+                text: 'You have a new report to process.',
+              })
+              console.log('WhatsApp message sent:', message)
+            }
+          } catch (whatsappErr) {
+            console.error('WhatsApp notify on processing:', whatsappErr)
+            // Do not fail the PATCH; post is already updated
+          }
+        }
+      }
 
       return c.json<ApiResponse<Post>>(
         {

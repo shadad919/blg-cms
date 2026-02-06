@@ -12,6 +12,14 @@ import { Eye, Image as ImageIcon, Filter, X, MapPin, Copy, Check, CheckCircle } 
 import { generateArabicMessage } from '@/lib/maps'
 import ImageModal from '@/components/ImageModal'
 
+export interface MapFilters {
+  category: string
+  status: string
+  dateRange: string
+  customStartDate: string
+  customEndDate: string
+}
+
 interface MapViewProps {
   posts: Post[]
   center?: [number, number]
@@ -20,6 +28,9 @@ interface MapViewProps {
   selectedPostId?: string | null
   /** Called after post status is updated (e.g. processing / completed) so parent can refetch */
   onPostUpdated?: () => void
+  /** When provided, map filter state is controlled by parent (sync with list). Posts are expected to be already filtered server-side. */
+  filters?: MapFilters
+  onFiltersChange?: (filters: MapFilters) => void
 }
 
 // Dynamically import Leaflet components to avoid SSR issues
@@ -141,7 +152,23 @@ const MapFlyToPost = dynamic(
   { ssr: false }
 )
 
-export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12, selectedPostId = null, onPostUpdated }: MapViewProps) {
+const DEFAULT_MAP_FILTERS: MapFilters = {
+  category: 'all',
+  status: 'all',
+  dateRange: 'all',
+  customStartDate: '',
+  customEndDate: '',
+}
+
+export default function MapView({
+  posts,
+  center = [36.2021, 37.1343],
+  zoom = 12,
+  selectedPostId = null,
+  onPostUpdated,
+  filters: controlledFilters,
+  onFiltersChange,
+}: MapViewProps) {
   const params = useParams()
   const locale = (params?.locale as string) || 'en'
   const tMap = useTranslations('map')
@@ -152,11 +179,23 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
   const [mapReady, setMapReady] = useState(false)
   const [mapContainerKey, setMapContainerKey] = useState('')
   const [L, setL] = useState<any>(null)
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [selectedStatus, setSelectedStatus] = useState<string>('all')
-  const [selectedDateRange, setSelectedDateRange] = useState<string>('all')
-  const [customStartDate, setCustomStartDate] = useState<string>('')
-  const [customEndDate, setCustomEndDate] = useState<string>('')
+  const [internalFilters, setInternalFilters] = useState<MapFilters>(DEFAULT_MAP_FILTERS)
+  const isControlled = controlledFilters != null && onFiltersChange != null
+  const selectedCategory = isControlled ? controlledFilters.category : internalFilters.category
+  const selectedStatus = isControlled ? controlledFilters.status : internalFilters.status
+  const selectedDateRange = isControlled ? controlledFilters.dateRange : internalFilters.dateRange
+  const customStartDate = isControlled ? controlledFilters.customStartDate : internalFilters.customStartDate
+  const customEndDate = isControlled ? controlledFilters.customEndDate : internalFilters.customEndDate
+  const setSelectedCategory = (v: string) =>
+    isControlled ? onFiltersChange!({ ...controlledFilters, category: v }) : setInternalFilters((f) => ({ ...f, category: v }))
+  const setSelectedStatus = (v: string) =>
+    isControlled ? onFiltersChange!({ ...controlledFilters, status: v }) : setInternalFilters((f) => ({ ...f, status: v }))
+  const setSelectedDateRange = (v: string) =>
+    isControlled ? onFiltersChange!({ ...controlledFilters, dateRange: v }) : setInternalFilters((f) => ({ ...f, dateRange: v }))
+  const setCustomStartDate = (v: string) =>
+    isControlled ? onFiltersChange!({ ...controlledFilters, customStartDate: v }) : setInternalFilters((f) => ({ ...f, customStartDate: v }))
+  const setCustomEndDate = (v: string) =>
+    isControlled ? onFiltersChange!({ ...controlledFilters, customEndDate: v }) : setInternalFilters((f) => ({ ...f, customEndDate: v }))
   const [showFilters, setShowFilters] = useState(true)
   const [copiedPostId, setCopiedPostId] = useState<string | null>(null)
   const [completingPostId, setCompletingPostId] = useState<string | null>(null)
@@ -267,30 +306,26 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
     }
   }, [mapReady])
 
-  // Filter posts based on category, status, and date
+  // When controlled, posts are already filtered server-side; only keep those with location for map display
   const filteredPosts = useMemo(() => {
-    let filtered = posts.filter(
+    const withLocation = posts.filter(
       (post) => post.location && post.location.latitude && post.location.longitude
     )
-
-    // Filter by category
+    if (isControlled) return withLocation
+    // Uncontrolled: client-side filter by category, status, date
+    let filtered = withLocation
     if (selectedCategory !== 'all') {
       filtered = filtered.filter((post) => post.category === selectedCategory)
     }
-
-    // Filter by status: when "all", exclude rejected (show rejected only when filtering by rejected)
     if (selectedStatus !== 'all') {
       filtered = filtered.filter((post) => post.status === selectedStatus)
     } else {
       filtered = filtered.filter((post) => post.status !== 'rejected')
     }
-
-    // Filter by date range
     if (selectedDateRange !== 'all') {
       const now = new Date()
       let startDate: Date
       let endDate = endOfDay(now)
-
       switch (selectedDateRange) {
         case 'today':
           startDate = startOfDay(now)
@@ -312,14 +347,13 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
         default:
           return filtered
       }
-
       filtered = filtered.filter((post) => {
         const postDate = new Date(post.createdAt)
         return postDate >= startDate && postDate <= endDate
       })
     }
     return filtered
-  }, [posts, selectedCategory, selectedStatus, selectedDateRange, customStartDate, customEndDate])
+  }, [posts, isControlled, selectedCategory, selectedStatus, selectedDateRange, customStartDate, customEndDate])
 
   const postsWithLocation = filteredPosts
 
@@ -460,11 +494,14 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
         {(selectedCategory !== 'all' || selectedStatus !== 'all' || selectedDateRange !== 'all') && (
           <button
             onClick={() => {
-              setSelectedCategory('all')
-              setSelectedStatus('all')
-              setSelectedDateRange('all')
-              setCustomStartDate('')
-              setCustomEndDate('')
+              if (isControlled) onFiltersChange!(DEFAULT_MAP_FILTERS)
+              else {
+                setSelectedCategory('all')
+                setSelectedStatus('all')
+                setSelectedDateRange('all')
+                setCustomStartDate('')
+                setCustomEndDate('')
+              }
             }}
             className="text-sm text-primary hover:underline"
           >
@@ -574,11 +611,14 @@ export default function MapView({ posts, center = [36.2021, 37.1343], zoom = 12,
               {(selectedCategory !== 'all' || selectedStatus !== 'all' || selectedDateRange !== 'all') && (
                 <button
                   onClick={() => {
-                    setSelectedCategory('all')
-                    setSelectedStatus('all')
-                    setSelectedDateRange('all')
-                    setCustomStartDate('')
-                    setCustomEndDate('')
+                    if (isControlled) onFiltersChange!(DEFAULT_MAP_FILTERS)
+                    else {
+                      setSelectedCategory('all')
+                      setSelectedStatus('all')
+                      setSelectedDateRange('all')
+                      setCustomStartDate('')
+                      setCustomEndDate('')
+                    }
                   }}
                   className="w-full mt-2 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-200 hover:text-gray-800 dark:hover:text-gray-50 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >

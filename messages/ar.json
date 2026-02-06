@@ -83,7 +83,7 @@
       "building": "مبنى",
       "wall": "جدار",
       "water": "مياه",
-      "mine": "منجم"
+      "mine": "لغم"
     }
   },
   "posts": {
@@ -137,6 +137,17 @@
   "settings": {
     "title": "الإعدادات",
     "subtitle": "إدارة حسابك وتفضيلاتك",
+    "tabs": {
+      "general": "عام",
+      "whatsappNavigator": "مستكشف واتساب"
+    },
+    "whatsappNavigator": {
+      "title": "مستكشف واتساب",
+      "description": "حدد رقم واتساب لكل فئة. يُستخدم عند التنقل أو الإشعار حسب الفئة.",
+      "phonePlaceholder": "مثال: 201234567890",
+      "activate": "تفعيل",
+      "deactivate": "إلغاء التفعيل"
+    },
     "language": {
       "title": "اللغة",
       "description": "اختر اللغة المفضلة لواجهة الاستخدام.",

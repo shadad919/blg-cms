@@ -85,3 +85,25 @@ export interface AuthResponse {
   admin: Omit<Admin, 'password'>
   token: string
 }
+
+// Settings collection – whatsapp_settings document
+export type PostCategory =
+  | 'road'
+  | 'electricity'
+  | 'street_light'
+  | 'building'
+  | 'wall'
+  | 'water'
+  | 'mine'
+
+export interface WhatsappCategorySetting {
+  phone: string
+  linked: boolean
+}
+
+export interface WhatsappSettingsDoc {
+  name: 'whatsapp_settings'
+  categories: Partial<Record<PostCategory, WhatsappCategorySetting>>
+  createdAt: string
+  updatedAt: string
+}

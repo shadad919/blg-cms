@@ -137,6 +137,17 @@
   "settings": {
     "title": "Settings",
     "subtitle": "Manage your account and preferences",
+    "tabs": {
+      "general": "General",
+      "whatsappNavigator": "WhatsApp Navigator"
+    },
+    "whatsappNavigator": {
+      "title": "WhatsApp Navigator",
+      "description": "Set a WhatsApp phone number per category. Used when navigating or notifying by category.",
+      "phonePlaceholder": "e.g. 201234567890",
+      "activate": "Activate",
+      "deactivate": "Deactivate"
+    },
     "language": {
       "title": "Language",
       "description": "Choose your preferred language for the interface.",

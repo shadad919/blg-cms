@@ -4,12 +4,14 @@ import { HTTPException } from 'hono/http-exception'
 import admin from './admin'
 import posts from './posts'
 import users from './users'
+import settings from './settings'
 
 const app = new Hono()
   .basePath('/api')
   .route('/admin', admin)
   .route('/posts', posts)
   .route('/users', users)
+  .route('/settings', settings)
 
 app.onError((err, c) => {
   console.error(err)

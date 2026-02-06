@@ -1,23 +1,80 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import api from '@/lib/api'
 import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
-import MapView from '@/components/MapView'
+import MapView, { type MapFilters } from '@/components/MapView'
 import { FileText, Clock, CheckCircle, Globe, MapPin, TrendingUp, Users, Check, ChevronLeft, ChevronRight, XCircle } from 'lucide-react'
 import { Post } from '@/lib/types'
 import { formatLocaleDate } from '@/lib/date-locale'
 import { dummyPosts } from '@/lib/dummyData'
+import { subDays, startOfDay, endOfDay } from 'date-fns'
 import 'leaflet/dist/leaflet.css'
+
+const DEFAULT_MAP_FILTERS: MapFilters = {
+  category: 'all',
+  status: 'all',
+  dateRange: 'all',
+  customStartDate: '',
+  customEndDate: '',
+}
+
+const LIST_PAGE_SIZE = 5
+const MAP_POSTS_LIMIT = 1000
+
+function buildPostsQueryParams(
+  filters: MapFilters,
+  options: { page?: number; limit: number }
+): string {
+  const params = new URLSearchParams()
+  if (filters.category && filters.category !== 'all') params.set('category', filters.category)
+  if (filters.status && filters.status !== 'all') params.set('status', filters.status)
+  if (options.page != null) params.set('page', String(options.page))
+  params.set('limit', String(options.limit))
+  params.set('sortBy', 'createdAt')
+  params.set('sortOrder', 'desc')
+  params.set('hasLocation', 'true')
+
+  let startDate: string | undefined
+  let endDate: string | undefined
+  if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
+    startDate = new Date(filters.customStartDate).toISOString()
+    endDate = new Date(filters.customEndDate).toISOString()
+  } else if (filters.dateRange && filters.dateRange !== 'all') {
+    const now = new Date()
+    switch (filters.dateRange) {
+      case 'today':
+        startDate = startOfDay(now).toISOString()
+        endDate = endOfDay(now).toISOString()
+        break
+      case 'week':
+        startDate = startOfDay(subDays(now, 7)).toISOString()
+        endDate = endOfDay(now).toISOString()
+        break
+      case 'month':
+        startDate = startOfDay(subDays(now, 30)).toISOString()
+        endDate = endOfDay(now).toISOString()
+        break
+    }
+  }
+  if (startDate) params.set('startDate', startDate)
+  if (endDate) params.set('endDate', endDate)
+  return params.toString()
+}
 
 interface DashboardStats {
   totalPosts: number
   pendingPosts: number
   approvedPosts: number
   publishedPosts: number
+}
+
+interface ListResult {
+  data: Post[]
+  pagination: { page: number; limit: number; total: number; totalPages: number; hasNext: boolean; hasPrev: boolean }
 }
 
 export default function DashboardPage() {
@@ -29,67 +86,117 @@ export default function DashboardPage() {
     approvedPosts: 0,
     publishedPosts: 0,
   })
-  const [posts, setPosts] = useState<Post[]>([])
+  const [mapFilters, setMapFilters] = useState<MapFilters>(DEFAULT_MAP_FILTERS)
+  const [listPage, setListPage] = useState(1)
+  const [mapPosts, setMapPosts] = useState<Post[]>([])
+  const [listResult, setListResult] = useState<ListResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [mapLoading, setMapLoading] = useState(true)
+  const [listLoading, setListLoading] = useState(true)
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
   const [completingPostId, setCompletingPostId] = useState<string | null>(null)
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [rejectPostId, setRejectPostId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [rejectingPostId, setRejectingPostId] = useState<string | null>(null)
-  const POSTS_PER_PAGE = 5
-  const [currentPage, setCurrentPage] = useState(1)
 
-  const fetchData = async () => {
-      try {
-        const [allPosts, pending, approved, published, allPostsData] = await Promise.all([
-          api.get('/posts?limit=1'),
-          api.get('/posts?status=pending&limit=1'),
-          api.get('/posts?status=approved&limit=1'),
-          api.get('/posts?status=published&limit=1'),
-          api.get('/posts?limit=100'),
-        ])
+  const fetchStats = useCallback(async () => {
+    try {
+      const [allPosts, pending, approved, published] = await Promise.all([
+        api.get('/posts?limit=1'),
+        api.get('/posts?status=pending&limit=1'),
+        api.get('/posts?status=approved&limit=1'),
+        api.get('/posts?status=published&limit=1'),
+      ])
+      setStats({
+        totalPosts: (allPosts as any).result.pagination.total,
+        pendingPosts: (pending as any).result.pagination.total,
+        approvedPosts: (approved as any).result.pagination.total,
+        publishedPosts: (published as any).result.pagination.total,
+      })
+    } catch (e) {
+      console.error('Error fetching stats:', e)
+      const pendingCount = dummyPosts.filter((p) => p.status === 'pending').length
+      const approvedCount = dummyPosts.filter((p) => p.status === 'approved').length
+      const publishedCount = dummyPosts.filter((p) => p.status === 'published').length
+      setStats({
+        totalPosts: dummyPosts.length,
+        pendingPosts: pendingCount,
+        approvedPosts: approvedCount,
+        publishedPosts: publishedCount,
+      })
+    }
+  }, [])
 
-        setStats({
-          totalPosts: allPosts.result.pagination.total,
-          pendingPosts: pending.result.pagination.total,
-          approvedPosts: approved.result.pagination.total,
-          publishedPosts: published.result.pagination.total,
-        })
-
-        setPosts(allPostsData.result.data)
-      } catch (error) {
-        console.error('Error fetching stats:', error)
-        // Use dummy data when backend is not available
-        const pendingCount = dummyPosts.filter((p) => p.status === 'pending').length
-        const approvedCount = dummyPosts.filter((p) => p.status === 'approved').length
-        const publishedCount = dummyPosts.filter((p) => p.status === 'published').length
-
-        setStats({
-          totalPosts: dummyPosts.length,
-          pendingPosts: pendingCount,
-          approvedPosts: approvedCount,
-          publishedPosts: publishedCount,
-        })
-
-        setPosts(dummyPosts)
-      } finally {
-      setLoading(false)
+  const fetchMapPosts = useCallback(async (filters: MapFilters) => {
+    setMapLoading(true)
+    try {
+      const q = buildPostsQueryParams(filters, { limit: MAP_POSTS_LIMIT })
+      const res = await api.get(`/posts?${q}`) as { result: { data: Post[] } }
+      setMapPosts(res.result?.data ?? [])
+    } catch (e) {
+      console.error('Error fetching map posts:', e)
+      setMapPosts([])
+    } finally {
       setMapLoading(false)
     }
-  }
+  }, [])
+
+  const fetchListPosts = useCallback(async (filters: MapFilters, page: number) => {
+    setListLoading(true)
+    try {
+      const q = buildPostsQueryParams(filters, { page, limit: LIST_PAGE_SIZE })
+      const res = await api.get(`/posts?${q}`) as { result: { data: Post[]; pagination: ListResult['pagination'] } }
+      setListResult({
+        data: res.result?.data ?? [],
+        pagination: res.result?.pagination ?? { page: 1, limit: LIST_PAGE_SIZE, total: 0, totalPages: 1, hasNext: false, hasPrev: false },
+      })
+    } catch (e) {
+      console.error('Error fetching list posts:', e)
+      setListResult({ data: [], pagination: { page: 1, limit: LIST_PAGE_SIZE, total: 0, totalPages: 1, hasNext: false, hasPrev: false } })
+    } finally {
+      setListLoading(false)
+    }
+  }, [])
+
+  const refetchAll = useCallback(() => {
+    fetchStats()
+    fetchMapPosts(mapFilters)
+    fetchListPosts(mapFilters, listPage)
+  }, [mapFilters, listPage, fetchStats, fetchMapPosts, fetchListPosts])
 
   useEffect(() => {
-    fetchData()
+    fetchStats()
+  }, [fetchStats])
+
+  useEffect(() => {
+    fetchMapPosts(mapFilters)
+  }, [mapFilters])
+
+  useEffect(() => {
+    fetchListPosts(mapFilters, listPage)
+  }, [mapFilters, listPage])
+
+  const handleFiltersChange = useCallback((filters: MapFilters) => {
+    setMapFilters(filters)
+    setListPage(1)
   }, [])
 
   const handleSelectPost = async (postId: string, status?: string) => {
     setSelectedPostId(postId)
     if (status === 'completed' || status === 'processing' || status === 'rejected') return
     try {
-      await api.patch(`/posts/${postId}`, { status: 'processing' })
-      await fetchData()
+     const res = await api.patch(`/posts/${postId}`, { status: 'processing' }).catch((e) => {
+        console.error('Failed to set processing:', e)
+      })
+      // if(res.result_message.type === 'OK') {
+      //   api.post('/whatsapp/send', {
+      //     to: settings?.categories?.road?.phone || '',
+      //     templateName: 'hello_world',
+      //     languageCode: 'en_US',
+      //   })
+      // }
+      refetchAll()
     } catch (e) {
       console.error('Failed to set processing:', e)
     }
@@ -101,7 +208,7 @@ export default function DashboardPage() {
     setCompletingPostId(postId)
     try {
       await api.patch(`/posts/${postId}`, { status: 'completed' })
-      await fetchData()
+      refetchAll()
     } catch (e) {
       console.error('Failed to complete post:', e)
     } finally {
@@ -132,7 +239,7 @@ export default function DashboardPage() {
         status: 'rejected',
         rejectionReason: rejectReason.trim() || undefined,
       })
-      await fetchData()
+      refetchAll()
       closeRejectModal()
     } catch (e) {
       console.error('Failed to reject post:', e)
@@ -172,17 +279,14 @@ export default function DashboardPage() {
     },
   ]
 
-  const postsWithLocation = posts
-    .filter((post) => post.location && post.location.latitude && post.location.longitude && post.status !== 'rejected')
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-
-  const totalPages = Math.max(1, Math.ceil(postsWithLocation.length / POSTS_PER_PAGE))
-  const pageStart = (currentPage - 1) * POSTS_PER_PAGE
-  const recentPosts = postsWithLocation.slice(pageStart, pageStart + POSTS_PER_PAGE)
+  const listPosts = listResult?.data ?? []
+  const pagination = listResult?.pagination
+  const totalPages = Math.max(1, pagination?.totalPages ?? 1)
+  const currentListPage = pagination?.page ?? 1
 
   useEffect(() => {
-    if (currentPage > totalPages) setCurrentPage(1)
-  }, [currentPage, totalPages])
+    if (listPage > totalPages && totalPages >= 1) setListPage(1)
+  }, [listPage, totalPages])
 
   return (
     <ProtectedRoute>
@@ -243,7 +347,13 @@ export default function DashboardPage() {
                       <div className="text-gray-500">{t('common.loading')}</div>
                     </div>
                   ) : (
-                    <MapView posts={posts} selectedPostId={selectedPostId} onPostUpdated={fetchData} />
+                    <MapView
+                      posts={mapPosts}
+                      selectedPostId={selectedPostId}
+                      onPostUpdated={refetchAll}
+                      filters={mapFilters}
+                      onFiltersChange={handleFiltersChange}
+                    />
                   )}
                 </div>
               </div>
@@ -257,12 +367,14 @@ export default function DashboardPage() {
                   <h2 className="text-xl font-semibold text-text dark:text-white">{t('dashboard.recentPosts')}</h2>
                 </div>
                 <div className="space-y-4">
-                  {recentPosts.length === 0 ? (
+                  {listLoading ? (
+                    <p className="text-sm text-gray-500 dark:text-white text-center py-4">{t('common.loading')}</p>
+                  ) : listPosts.length === 0 ? (
                     <p className="text-sm text-gray-500 dark:text-white text-center py-4">
                       {t('dashboard.noPostsWithLocations')}
                     </p>
                   ) : (
-                    recentPosts.map((post) => (
+                    listPosts.map((post) => (
                       <div
                         key={post._id || post.id}
                         role="button"
@@ -351,24 +463,24 @@ export default function DashboardPage() {
                     ))
                   )}
                 </div>
-                {postsWithLocation.length > POSTS_PER_PAGE && (
+                {pagination && pagination.total > LIST_PAGE_SIZE && (
                   <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-600">
                     <button
                       type="button"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage <= 1}
+                      onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                      disabled={currentListPage <= 1}
                       className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4" />
                       {t('common.previous')}
                     </button>
                     <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {t('common.pageOf', { current: currentPage, total: totalPages })}
+                      {t('common.pageOf', { current: currentListPage, total: totalPages })}
                     </span>
                     <button
                       type="button"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage >= totalPages}
+                      onClick={() => setListPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentListPage >= totalPages}
                       className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {t('common.next')}

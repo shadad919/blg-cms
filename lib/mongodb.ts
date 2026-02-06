@@ -57,9 +57,13 @@ export async function getUsersCollection(): Promise<Collection> {
 
 export async function getCategoriesCollection(): Promise<Collection> {
   const db = await getDb()
-  return db.collection('categories');
-};
+  return db.collection('categories')
+}
 
+export async function getSettingsCollection(): Promise<Collection> {
+  const db = await getDb()
+  return db.collection('settings')
+}
 
 // Thenable so "await clientPromise" still works; connection is lazy (no MONGO_URI needed at build)
 export default {

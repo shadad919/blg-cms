@@ -19,7 +19,7 @@ function getCategoryNameAr(category: string): string {
     building: 'مبنى',
     wall: 'جدار',
     water: 'ماء',
-    mine: 'منجم',
+    mine: 'لغم',
   }
   return categoryMap[category] || category
 }
