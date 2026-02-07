@@ -161,8 +161,10 @@ posts.get('/', async (c) => {
     const status = c.req.query('status') as string | undefined
     const priority = c.req.query('priority') as PostPriority | undefined
     const category = c.req.query('category') as string | undefined
-    const startDate = c.req.query('startDate') as string | undefined
-    const endDate = c.req.query('endDate') as string | undefined
+    const startDateRaw = c.req.query('startDate')
+    const endDateRaw = c.req.query('endDate')
+    const startDate = (Array.isArray(startDateRaw) ? startDateRaw[0] : startDateRaw) as string | undefined
+    const endDate = (Array.isArray(endDateRaw) ? endDateRaw[0] : endDateRaw) as string | undefined
     const hasLocation = c.req.query('hasLocation') === 'true'
     const sortBy = c.req.query('sortBy') || 'createdAt'
     const sortOrder = c.req.query('sortOrder') === 'asc' ? 1 : -1
@@ -196,9 +198,18 @@ posts.get('/', async (c) => {
     }
 
     if (startDate || endDate) {
-      filter.createdAt = {}
-      if (startDate) filter.createdAt.$gte = new Date(startDate)
-      if (endDate) filter.createdAt.$lte = new Date(endDate)
+      const start = startDate ? new Date(startDate.trim()) : null
+      const end = endDate ? new Date(endDate.trim()) : null
+      const startValid = start && !isNaN(start.getTime())
+      const endValid = end && !isNaN(end.getTime())
+      if (startValid || endValid) {
+        const dateConditions: object[] = []
+        if (startValid) dateConditions.push({ $gte: [{ $toDate: '$createdAt' }, start] })
+        if (endValid) dateConditions.push({ $lte: [{ $toDate: '$createdAt' }, end] })
+        if (dateConditions.length) {
+          filter.$expr = dateConditions.length === 1 ? dateConditions[0] : { $and: dateConditions }
+        }
+      }
     }
 
     if (hasLocation) {

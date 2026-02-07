@@ -41,8 +41,13 @@ function buildPostsQueryParams(
   let startDate: string | undefined
   let endDate: string | undefined
   if (filters.dateRange === 'custom' && filters.customStartDate && filters.customEndDate) {
-    startDate = new Date(filters.customStartDate).toISOString()
-    endDate = new Date(filters.customEndDate).toISOString()
+    let start = new Date(filters.customStartDate)
+    let end = new Date(filters.customEndDate)
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+      if (end < start) [start, end] = [end, start]
+      startDate = startOfDay(start).toISOString()
+      endDate = endOfDay(end).toISOString()
+    }
   } else if (filters.dateRange && filters.dateRange !== 'all') {
     const now = new Date()
     switch (filters.dateRange) {
@@ -190,7 +195,7 @@ export default function DashboardPage() {
   }, [mapFilters, listPage])
 
   const handleFiltersChange = useCallback((filters: MapFilters) => {
-    setMapFilters(filters)
+    setMapFilters((prev) => ({ ...prev, ...filters }))
     setListPage(1)
   }, [])
 
