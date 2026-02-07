@@ -21,7 +21,21 @@
     "copied": "Copied!",
     "previous": "Previous",
     "next": "Next",
-    "pageOf": "Page {current} of {total}"
+    "pageOf": "Page {current} of {total}",
+    "toast": {
+      "rejectSuccess": "Report rejected",
+      "rejectError": "Failed to reject report",
+      "processingSuccess": "Marked as processing",
+      "processingError": "Failed to set processing",
+      "completeSuccess": "Report completed",
+      "completeError": "Failed to complete report",
+      "updateSuccess": "Report updated",
+      "updateError": "Failed to update report",
+      "createSuccess": "Report created",
+      "createError": "Failed to create report",
+      "deleteSuccess": "Report deleted",
+      "deleteError": "Failed to delete report"
+    }
   },
   "auth": {
     "loginTitle": "Admin Login",
@@ -31,6 +45,8 @@
   },
   "dashboard": {
     "title": "Dashboard",
+    "processingPosts": "Processing Reports",
+    "completedPosts": "Completed Reports",
     "overview": "Overview",
     "totalPosts": "Total Reports",
     "pendingPosts": "Pending Reports",
@@ -42,7 +58,9 @@
     "quickActions": "Quick Actions",
     "createNewPost": "Create New Report",
     "reviewPending": "Review Pending",
-    "lastUpdated": "Last updated"
+    "lastUpdated": "Last updated",
+    "trendVsPrevious7Days": "vs previous 7 days (by sent date)",
+    "trendVsPrevious30Days": "vs previous 30 days (by sent date)"
   },
   "map": {
     "filters": "Filters",
@@ -61,6 +79,8 @@
     "statusLabelShort": "Status",
     "viewDetails": "View Details",
     "markComplete": "Mark complete",
+    "markAsProcessing": "Mark as processing",
+    "rejectPost": "Reject report",
     "authorLabel": "Author",
     "copyGoogleMapsUrl": "Copy Google Maps URL",
     "showOnMap": "Show on map",
@@ -131,8 +151,20 @@
   "navigation": {
     "dashboard": "Dashboard",
     "posts": "Reports",
+    "statistics": "Statistics",
     "menuTitle": "Main Menu",
     "settings": "Settings"
+  },
+  "statistics": {
+    "title": "Statistics",
+    "subtitle": "Reports overview by status, category, and time (by sent date).",
+    "statusDistribution": "Status distribution",
+    "byCategory": "Reports by category",
+    "reportsOverTime": "Reports over time (last 30 days)",
+    "reportsCount": "Reports",
+    "noData": "No data to display",
+    "exportExcel": "Export Excel",
+    "exportPdf": "Export PDF"
   },
   "settings": {
     "title": "Settings",

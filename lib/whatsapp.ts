@@ -1,15 +1,19 @@
 /**
- * WhatsApp Business API (Facebook Graph API) – send text messages.
- * Uses env: WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID
+ * WhatsApp – DISABLED (commented out).
+ * Re-enable by uncommenting the block below and restoring imports in posts.ts and settings.
  */
-
-const GRAPH_API_BASE = 'https://graph.facebook.com/v22.0'
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 export interface SendWhatsAppMessageOptions {
-  /** Recipient phone number in E.164 format (e.g. "201234567890") – no + prefix */
   to: string
-  /** Message text body (max 4096 characters for Cloud API) */
   text: string
+}
+
+export interface SendWhatsAppTemplateOptions {
+  to: string
+  name: string
+  params?: string[]
+  languageCode?: string
 }
 
 export interface SendWhatsAppMessageResult {
@@ -18,64 +22,65 @@ export interface SendWhatsAppMessageResult {
   messages: Array<{ id: string }>
 }
 
-/**
- * Sends a WhatsApp text message via the Facebook Graph API.
- * Callable from server-side only (e.g. when a post is set to processing, the posts API calls this with the category’s linked number).
- * Note: Only works within the 24-hour messaging window unless you use a pre-approved template to start the conversation.
- *
- * @param options - Recipient (to) and message text
- * @returns Graph API response or throws on error
- */
 export async function sendWhatsAppMessage(
-  options: SendWhatsAppMessageOptions
+  _options: SendWhatsAppMessageOptions
 ): Promise<SendWhatsAppMessageResult> {
+  throw new Error('WhatsApp is disabled')
+}
+
+export async function sendWhatsAppTemplate(
+  _options: SendWhatsAppTemplateOptions
+): Promise<SendWhatsAppMessageResult> {
+  throw new Error('WhatsApp is disabled')
+}
+
+/*
+// ========== Original WhatsApp implementation (disabled) ==========
+const GRAPH_API_BASE = 'https://graph.facebook.com/v21.0'
+
+export async function sendWhatsAppMessage(options: SendWhatsAppMessageOptions): Promise<SendWhatsAppMessageResult> {
   const token = process.env.WHATSAPP_ACCESS_TOKEN
-  const phoneNumberId =
-    process.env.WHATSAPP_PHONE_NUMBER_ID ?? '914748435065807'
-
-  if (!token) {
-    throw new Error(
-      'WhatsApp API is not configured: WHATSAPP_ACCESS_TOKEN is missing'
-    )
-  }
-
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID ?? '914748435065807'
+  if (!token) throw new Error('WhatsApp API is not configured: WHATSAPP_ACCESS_TOKEN is missing')
   const { to, text } = options
-  const body = {
-    messaging_product: 'whatsapp',
-    to: to.replace(/\D/g, ''),
-    type: 'text',
-    text: { body: text },
-  }
-
+  const toNormalized = to.replace(/\D/g, '')
+  if (!toNormalized) throw new Error('WhatsApp: recipient phone number is missing or invalid (no digits)')
+  if (!text?.trim()) throw new Error('WhatsApp: message text is required')
+  const body = { messaging_product: 'whatsapp', to: toNormalized, text: { body: text.trim() } }
   const url = `${GRAPH_API_BASE}/${phoneNumberId}/messages`
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-
   const data = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    const message =
-      data.error?.message ?? data.error?.error_user_msg ?? response.statusText
-    throw new Error(`WhatsApp API error: ${message}`)
-  }
-
+  if (!response.ok) throw new Error(`WhatsApp API error: ${data.error?.message ?? response.statusText}`)
   return data as SendWhatsAppMessageResult
 }
 
-/** @deprecated Use sendWhatsAppMessage. Kept for backward compatibility. */
-export async function sendWhatsAppTemplate(options: {
-  to: string
-  templateName?: string
-  languageCode?: string
-  components?: unknown[]
-}): Promise<SendWhatsAppMessageResult> {
-  return sendWhatsAppMessage({
-    to: options.to,
-    text: 'You have a new report to process.',
+export async function sendWhatsAppTemplate(options: SendWhatsAppTemplateOptions): Promise<SendWhatsAppMessageResult> {
+  const token = process.env.WHATSAPP_ACCESS_TOKEN
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID ?? '914748435065807'
+  if (!token) throw new Error('WhatsApp API is not configured: WHATSAPP_ACCESS_TOKEN is missing')
+  const { to, name, params = [], languageCode = 'en_US' } = options
+  const toNormalized = to.replace(/\D/g, '')
+  if (!toNormalized) throw new Error('WhatsApp: recipient phone number is missing or invalid (no digits)')
+  const template: { name: string; language: { code: string }; components?: Array<{ type: 'body'; parameters: Array<{ type: 'text'; text: string }> }> } = {
+    name,
+    language: { code: languageCode },
+  }
+  if (params.length > 0) {
+    template.components = [{ type: 'body', parameters: params.map((p) => ({ type: 'text' as const, text: p })) }]
+  }
+  const body = { messaging_product: 'whatsapp', to: toNormalized, type: 'template', template }
+  const url = `${GRAPH_API_BASE}/${phoneNumberId}/messages`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   })
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(`WhatsApp API error: ${data.error?.message ?? response.statusText}`)
+  return data as SendWhatsAppMessageResult
 }
+*/

@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import api from '@/lib/api'
+import { toast } from 'sonner'
 import Layout from '@/components/Layout'
 import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
@@ -67,9 +68,11 @@ export default function EditPostPage() {
         tags: data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
       }
       await api.patch(`/posts/${params.id}`, updateData)
+      toast.success(t('common.toast.updateSuccess'))
       router.push(`/${locale}/posts/${params.id}`)
     } catch (error) {
       console.error('Error updating post:', error)
+      toast.error(t('common.toast.updateError'))
     } finally {
       setLoading(false)
     }

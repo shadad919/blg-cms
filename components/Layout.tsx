@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useAuthStore } from '@/lib/store'
-import { LogOut, LayoutDashboard, FileText, Settings, User } from 'lucide-react'
+import { LogOut, LayoutDashboard, FileText, Settings, User, BarChart3 } from 'lucide-react'
 import { Link, usePathname, useRouter } from '@/i18n/routing'
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -19,6 +19,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: t('navigation.dashboard') },
     { href: '/posts', icon: FileText, label: t('navigation.posts') },
+    { href: '/statistics', icon: BarChart3, label: t('navigation.statistics') },
     { href: '/settings', icon: Settings, label: t('navigation.settings') },
   ]
 

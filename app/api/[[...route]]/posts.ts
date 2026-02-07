@@ -5,8 +5,9 @@ import { ObjectId } from 'mongodb'
 import { put } from '@vercel/blob'
 import { ApiResponse, Post, PaginatedResponse, PostStatus, PostPriority } from '@/lib/types'
 import { authenticateAdmin, getCurrentAdmin } from '@/lib/auth-middleware'
-import { getCategoriesCollection, getPostsCollection, getUsersCollection, getSettingsCollection } from '@/lib/mongodb'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { getCategoriesCollection, getPostsCollection, getUsersCollection } from '@/lib/mongodb'
+// getSettingsCollection used only for WhatsApp (disabled)
+// import { sendWhatsAppMessage, sendWhatsAppTemplate } from '@/lib/whatsapp' // WhatsApp disabled
 
 const GEOPROXY_KEY = process.env.GEOPROXY_KEY ?? process.env.NEXT_PUBLIC_GEOPROXY_KEY
 
@@ -518,27 +519,23 @@ posts.patch(
       const updatedDoc = await collection.findOne(query)
       const updatedPost = convertToPost(updatedDoc!)
 
-      // When status is set to processing, send WhatsApp to the category's linked number (callable function, no separate API)
-      if (data.status === 'processing') {
-        const category = updatedDoc?.category ?? existingDoc?.category
-        if (category) {
-          try {
-            const settingsCol = await getSettingsCollection()
-            const whatsappDoc = await settingsCol.findOne({ name: 'whatsapp_settings' })
-            const categorySetting = whatsappDoc?.categories?.[category as keyof typeof whatsappDoc.categories]
-            if (categorySetting?.linked && categorySetting?.phone?.trim()) {
-              const message = await sendWhatsAppMessage({
-                to: categorySetting.phone.trim(),
-                text: 'You have a new report to process.',
-              })
-              console.log('WhatsApp message sent:', message)
-            }
-          } catch (whatsappErr) {
-            console.error('WhatsApp notify on processing:', whatsappErr)
-            // Do not fail the PATCH; post is already updated
-          }
-        }
-      }
+      // WhatsApp disabled – was: send template to category's linked number when status is set to processing
+      // if (data.status === 'processing') {
+      //   const category = updatedDoc?.category ?? existingDoc?.category
+      //   if (category) {
+      //     try {
+      //       const settingsCol = await getSettingsCollection()
+      //       const whatsappDoc = await settingsCol.findOne({ name: 'whatsapp_settings' })
+      //       const categorySetting = whatsappDoc?.categories?.[category as keyof typeof whatsappDoc.categories]
+      //       const phone = categorySetting?.phone?.trim()
+      //       if (categorySetting?.linked && phone && phone.replace(/\D/g, '').length > 0) {
+      //         await sendWhatsAppMessage({ to: phone, text: 'You have a new report to process.' })
+      //       }
+      //     } catch (whatsappErr) {
+      //       console.error('WhatsApp notify on processing:', whatsappErr)
+      //     }
+      //   }
+      // }
 
       return c.json<ApiResponse<Post>>(
         {

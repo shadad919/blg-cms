@@ -5,6 +5,7 @@ import admin from './admin'
 import posts from './posts'
 import users from './users'
 import settings from './settings'
+import stats from './stats'
 
 const app = new Hono()
   .basePath('/api')
@@ -12,6 +13,7 @@ const app = new Hono()
   .route('/posts', posts)
   .route('/users', users)
   .route('/settings', settings)
+  .route('/stats', stats)
 
 app.onError((err, c) => {
   console.error(err)

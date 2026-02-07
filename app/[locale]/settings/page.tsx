@@ -3,21 +3,17 @@
 import { useTranslations, useLocale } from 'next-intl'
 import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
-import { Globe, Moon, Sun, Monitor, Check, Palette, MessageCircle, Loader2 } from 'lucide-react'
+import { Globe, Moon, Sun, Monitor, Check, Palette } from 'lucide-react'
+// import { MessageCircle, Loader2 } from 'lucide-react' // WhatsApp tab
 import { usePathname, useRouter } from '@/i18n/routing'
-import { useSettingsStore, type Theme, type PostCategory, DEFAULT_PRIMARY_COLOR } from '@/lib/settings-store'
-import { useState, useEffect } from 'react'
-import { api } from '@/lib/api'
-
-const CATEGORIES: PostCategory[] = [
-  'road',
-  'electricity',
-  'street_light',
-  'building',
-  'wall',
-  'water',
-  'mine',
-]
+import { useSettingsStore, type Theme, DEFAULT_PRIMARY_COLOR } from '@/lib/settings-store'
+import { useState } from 'react'
+// import { useEffect } from 'react'
+// import { api } from '@/lib/api'
+// import type { PostCategory } from '@/lib/settings-store'
+// const CATEGORIES: PostCategory[] = [
+//   'road', 'electricity', 'street_light', 'building', 'wall', 'water', 'mine',
+// ]
 
 const PRIMARY_PRESETS = [
   { name: 'Blue', value: '#1E3A8A' },
@@ -35,27 +31,20 @@ const LOCALE_OPTIONS = [
   { value: 'ar' as const, label: 'العربية' },
 ]
 
-type SettingsTab = 'general' | 'whatsapp'
+type SettingsTab = 'general' // | 'whatsapp'  // WhatsApp disabled
 
 export default function SettingsPage() {
   const t = useTranslations()
   const pathname = usePathname()
   const router = useRouter()
   const locale = useLocale()
-  const {
-    theme,
-    setTheme,
-    primaryColor,
-    setPrimaryColor,
-    whatsappNavigatorSettings,
-    setWhatsAppNavigatorSetting,
-    setWhatsAppNavigatorSettings,
-  } = useSettingsStore()
+  const { theme, setTheme, primaryColor, setPrimaryColor } = useSettingsStore()
+  // whatsappNavigatorSettings, setWhatsAppNavigatorSetting, setWhatsAppNavigatorSettings – WhatsApp disabled
   const [saved, setSaved] = useState(false)
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
-  const [whatsappLoading, setWhatsappLoading] = useState(false)
-  const [whatsappSaving, setWhatsappSaving] = useState(false)
-  const [whatsappError, setWhatsappError] = useState<string | null>(null)
+  // const [whatsappLoading, setWhatsappLoading] = useState(false)
+  // const [whatsappSaving, setWhatsappSaving] = useState(false)
+  // const [whatsappError, setWhatsappError] = useState<string | null>(null)
 
   const handleLocaleChange = (locale: string) => {
     router.replace(pathname || '/dashboard', { locale: locale as 'en' | 'ar' })
@@ -81,36 +70,12 @@ export default function SettingsPage() {
 
   const tabs: { id: SettingsTab; labelKey: string; icon: typeof Globe }[] = [
     { id: 'general', labelKey: 'settings.tabs.general', icon: Sun },
-    { id: 'whatsapp', labelKey: 'settings.tabs.whatsappNavigator', icon: MessageCircle },
+    // { id: 'whatsapp', labelKey: 'settings.tabs.whatsappNavigator', icon: MessageCircle }, // WhatsApp disabled
   ]
 
-  // Load WhatsApp settings from API when opening the tab
-  useEffect(() => {
-    if (activeTab !== 'whatsapp') return
-    setWhatsappError(null)
-    setWhatsappLoading(true)
-    api
-      .get('/settings/whatsapp')
-      .then((res: { result?: { categories?: Record<string, { phone: string; linked: boolean }> } }) => {
-        const categories = res?.result?.categories
-        if (categories) setWhatsAppNavigatorSettings(categories)
-      })
-      .catch(() => setWhatsappError('Failed to load WhatsApp settings'))
-      .finally(() => setWhatsappLoading(false))
-  }, [activeTab, setWhatsAppNavigatorSettings])
-
-  const handleSaveWhatsappSettings = () => {
-    setWhatsappError(null)
-    setWhatsappSaving(true)
-    api
-      .patch('/settings/whatsapp', { categories: whatsappNavigatorSettings })
-      .then(() => {
-        setSaved(true)
-        setTimeout(() => setSaved(false), 2000)
-      })
-      .catch(() => setWhatsappError('Failed to save WhatsApp settings'))
-      .finally(() => setWhatsappSaving(false))
-  }
+  // WhatsApp disabled – load/save settings from API
+  // useEffect(() => { ... }, [activeTab, setWhatsAppNavigatorSettings])
+  // const handleSaveWhatsappSettings = () => { ... }
 
   return (
     <ProtectedRoute>
@@ -156,89 +121,11 @@ export default function SettingsPage() {
             })}
           </div>
 
+          {/* WhatsApp tab disabled
           {activeTab === 'whatsapp' && (
-            <div className="card">
-              <h2 className="text-xl font-semibold text-text dark:text-white mb-2 flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-primary" />
-                {t('settings.whatsappNavigator.title')}
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
-                {t('settings.whatsappNavigator.description')}
-              </p>
-              {whatsappError && (
-                <p className="text-red-600 dark:text-red-400 text-sm mb-4">{whatsappError}</p>
-              )}
-              {whatsappLoading ? (
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 py-8">
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  {t('common.loading')}
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-4">
-                    {CATEGORIES.map((category) => {
-                      const value = whatsappNavigatorSettings[category] ?? { phone: '', linked: false }
-                      return (
-                        <div
-                          key={category}
-                          className="flex flex-wrap items-center gap-3 sm:gap-4 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0"
-                        >
-                          <span className="label text-text dark:text-gray-100 min-w-[10rem]">
-                            {t(`map.categories.${category}`)}
-                          </span>
-                          <input
-                            type="tel"
-                            value={value.phone}
-                            onChange={(e) =>
-                              setWhatsAppNavigatorSetting(category, {
-                                ...value,
-                                phone: e.target.value,
-                              })
-                            }
-                            placeholder={t('settings.whatsappNavigator.phonePlaceholder')}
-                            className="input flex-1 min-w-[12rem] max-w-md"
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setWhatsAppNavigatorSetting(category, {
-                                ...value,
-                                linked: !value.linked,
-                              })
-                            }
-                            className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
-                              value.linked
-                                ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30'
-                                : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30'
-                            }`}
-                          >
-                            {value.linked
-                              ? t('settings.whatsappNavigator.deactivate')
-                              : t('settings.whatsappNavigator.activate')}
-                          </button>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div className="mt-6 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={handleSaveWhatsappSettings}
-                      disabled={whatsappSaving}
-                      className="btn-primary flex items-center gap-2"
-                    >
-                      {whatsappSaving ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Check className="w-4 h-4" />
-                      )}
-                      {t('common.save')}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            <div className="card"> ... WhatsApp Navigator UI ... </div>
           )}
+          */}
 
           {activeTab === 'general' && (
             <>

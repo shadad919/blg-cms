@@ -8,9 +8,11 @@ import api from '@/lib/api'
 import { Post } from '@/lib/types'
 import { subDays, startOfDay, endOfDay } from 'date-fns'
 import { formatLocaleDate } from '@/lib/date-locale'
-import { Eye, Image as ImageIcon, Filter, X, MapPin, Copy, Check, CheckCircle } from 'lucide-react'
+import { Eye, Image as ImageIcon, Filter, X, MapPin, Copy, Check, ThumbsUp, CheckCircle, XCircle } from 'lucide-react'
 import { generateArabicMessage } from '@/lib/maps'
 import ImageModal from '@/components/ImageModal'
+import RejectModal from './modals/rejectModal'
+import { toast } from 'sonner'
 
 export interface MapFilters {
   category: string
@@ -199,10 +201,14 @@ export default function MapView({
   const [showFilters, setShowFilters] = useState(true)
   const [copiedPostId, setCopiedPostId] = useState<string | null>(null)
   const [completingPostId, setCompletingPostId] = useState<string | null>(null)
+  const [rejectingPostId, setRejectingPostId] = useState<string | null>(null)
   const [imageViewerOpen, setImageViewerOpen] = useState(false)
   const [imageViewerUrls, setImageViewerUrls] = useState<string[]>([])
   const [imageViewerIndex, setImageViewerIndex] = useState(0)
-
+  const [rejectModalOpen, setRejectModalOpen] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
+  const [isRejecting, setIsRejecting] = useState(false)
+  const [processingPostId, setProcessingPostId] = useState<string | null>(null)
   const handleMarkerClick = useMemo(
     () => async (postId: string) => {
       const post = posts.find((p) => (p._id || p.id) === postId)
@@ -210,11 +216,13 @@ export default function MapView({
       try {
         await api.patch(`/posts/${postId}`, { status: 'processing' })
         onPostUpdated?.()
+        toast.success(tCommon('toast.processingSuccess'))
       } catch (e) {
         console.error('Failed to set processing:', e)
+        toast.error(tCommon('toast.processingError'))
       }
     },
-    [onPostUpdated, posts]
+    [onPostUpdated, posts, tCommon]
   )
 
   const handleCompletePost = async (postId: string, e: React.MouseEvent) => {
@@ -224,10 +232,43 @@ export default function MapView({
     try {
       await api.patch(`/posts/${postId}`, { status: 'completed' })
       onPostUpdated?.()
+      toast.success(tCommon('toast.completeSuccess'))
     } catch (e) {
       console.error('Failed to complete post:', e)
+      toast.error(tCommon('toast.completeError'))
     } finally {
       setCompletingPostId(null)
+    }
+  }
+
+  const handleOpenRejectModal = async (postId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setRejectModalOpen(true)
+    setRejectingPostId(postId)
+  };
+  const handleCloseRejectModal = () => {
+    setRejectModalOpen(false)
+    setRejectingPostId(null)
+    setRejectReason('')
+  }
+  const handleConfirmReject = async () => {
+    if (!rejectingPostId) return
+    setIsRejecting(true)
+    try {
+      await api.patch(`/posts/${rejectingPostId}`, {
+        status: 'rejected',
+        rejectionReason: rejectReason.trim() || undefined,
+      })
+      onPostUpdated?.()
+      handleCloseRejectModal()
+      toast.success(tCommon('toast.rejectSuccess'))
+    } catch (err) {
+      console.error('Failed to reject post:', err)
+      toast.error(tCommon('toast.rejectError'))
+    } finally {
+      setRejectingPostId(null)
+      setIsRejecting(false)
     }
   }
 
@@ -245,6 +286,22 @@ export default function MapView({
     [tMap]
   )
 
+  const handleMarkAsProcessing = async (postId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setProcessingPostId(postId)
+    try {
+      await api.patch(`/posts/${postId}`, { status: 'processing' })
+      onPostUpdated?.()
+    }catch (e) {
+      console.error('Failed to mark as processing:', e)
+      toast.error(tCommon('toast.processingError'))
+    } finally {
+      setProcessingPostId(null)
+    }
+
+
+  }
   const dateRanges = useMemo(
     () => [
       { value: 'all', label: tMap('allTime') },
@@ -611,14 +668,11 @@ export default function MapView({
               {(selectedCategory !== 'all' || selectedStatus !== 'all' || selectedDateRange !== 'all') && (
                 <button
                   onClick={() => {
-                    if (isControlled) onFiltersChange!(DEFAULT_MAP_FILTERS)
-                    else {
-                      setSelectedCategory('all')
-                      setSelectedStatus('all')
-                      setSelectedDateRange('all')
-                      setCustomStartDate('')
-                      setCustomEndDate('')
-                    }
+                    setSelectedCategory('all')
+                    setSelectedStatus('all')
+                    setSelectedDateRange('all')
+                    setCustomStartDate('')
+                    setCustomEndDate('')
                   }}
                   className="w-full mt-2 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-200 hover:text-gray-800 dark:hover:text-gray-50 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
@@ -671,21 +725,56 @@ export default function MapView({
               <Popup>
                 <div className="p-3 min-w-[240px]">
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-semibold text-sm text-text dark:text-gray-100 flex-1 min-w-0">{post.title}</h3>
+                    <h3 className="font-semibold text-sm text-text dark:text-black flex-1 min-w-0">{post.title}</h3>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={(e) => handleCompletePost(postId, e)}
-                        disabled={completingPostId === postId || post.status === 'completed'}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-500 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={tMap('markComplete')}
-                      >
-                        {completingPostId === postId ? (
-                          <span className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
-                        ) : (
+                      {post.status === 'completed' ? (
+                        <span
+                          className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium"
+                          title={tPosts('status.completed')}
+                        >
                           <CheckCircle className="w-4 h-4" />
-                        )}
-                      </button>
+                          {tPosts('status.completed')}
+                        </span>
+                      ) : post.status === 'processing' ? (
+                        <button
+                          type="button"
+                          onClick={(e) => handleCompletePost(postId, e)}
+                          disabled={completingPostId === postId}
+                          className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-500 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={tMap('markComplete')}
+                        >
+                          {completingPostId === postId ? (
+                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4" />
+                          )}
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => handleMarkAsProcessing(postId, e)}
+                          disabled={processingPostId === postId}
+                          className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-500 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={tMap('markAsProcessing')}
+                        >
+                          {processingPostId === postId ? (
+                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Check className="w-4 h-4" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenRejectModal(postId, e)}
+                          disabled={rejectingPostId === postId}
+                          className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={tPosts('rejectPost')}
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                        </div>
+                      )}
                       <a
                         href={`/${locale}/posts/${post._id || post.id}`}
                         className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors cursor-pointer"
@@ -697,19 +786,19 @@ export default function MapView({
                   </div>
                   
                   {post.content && (
-                    <p className="text-xs text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">{post.content}</p>
+                    <p className="text-xs text-gray-600 dark:text-black mb-3 line-clamp-2">{post.content}</p>
                   )}
                   
                   <div className="space-y-2 text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-700 dark:text-gray-200">{tMap('categoryLabelShort')}:</span>
+                      <span className="font-medium text-gray-700 dark:text-black">{tMap('categoryLabelShort')}:</span>
                       <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary capitalize border border-primary/20">
                         {post.category ? tMap(`categories.${post.category}`) : post.category}
                       </span>
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-700 dark:text-gray-200">{tMap('statusLabelShort')}:</span>
+                      <span className="font-medium text-gray-700 dark:text-black">{tMap('statusLabelShort')}:</span>
                       <span
                         className="px-2.5 py-1 rounded-md text-xs font-medium border"
                         style={{
@@ -736,9 +825,9 @@ export default function MapView({
                             setImageViewerIndex(0)
                             setImageViewerOpen(true)
                           }}
-                          className="flex items-center gap-2 text-left hover:underline text-gray-600 dark:text-gray-300"
+                          className="flex items-center gap-2 text-left hover:underline text-gray-600 dark:text-blue-500"
                         >
-                          <ImageIcon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                          <ImageIcon className="w-3.5 h-3.5 text-gray-500 dark:text-black" />
                           <span>
                             {tMap('imagesCount', { count: urls.length })} — {tMap('view')}
                           </span>
@@ -746,7 +835,7 @@ export default function MapView({
                       ) : (
                         <div className="flex items-center gap-2">
                           <ImageIcon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
-                          <span className="text-gray-600 dark:text-gray-300">
+                          <span className="text-gray-600 dark:text-black">
                             {tMap('imagesCountLocal', { count: post.images.length })}
                           </span>
                         </div>
@@ -755,8 +844,8 @@ export default function MapView({
                     
                     {post.authorName && (
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-700 dark:text-gray-200">{tMap('authorLabel')}:</span>
-                        <span className="text-gray-600 dark:text-gray-300">{post.authorName}</span>
+                        <span className="font-medium text-gray-700 dark:text-black">{tMap('authorLabel')}:</span>
+                        <span className="text-gray-600 dark:text-black">{post.authorName}</span>
                       </div>
                     )}
                     
@@ -764,8 +853,8 @@ export default function MapView({
                       <div className="space-y-2">
                         {post.location.address && (
                           <div className="flex items-start gap-2">
-                            <span className="font-medium text-gray-700 dark:text-gray-200">{tMap('addressLabel')}:</span>
-                            <span className="text-gray-600 dark:text-gray-300 text-[11px] leading-tight">{post.location.address}</span>
+                            <span className="font-medium text-gray-700 dark:text-black">{tMap('addressLabel')}:</span>
+                            <span className="text-gray-600 dark:text-black text-[11px] leading-tight">{post.location.address}</span>
                           </div>
                         )}
                         <button
@@ -789,7 +878,7 @@ export default function MapView({
                     )}
                     
                     <div className="flex items-center gap-2 pt-1 border-t border-gray-200 dark:border-gray-500">
-                      <span className="text-gray-500 dark:text-gray-300 text-[11px]">
+                      <span className="text-gray-500 dark:text-black text-[11px]">
                         {formatLocaleDate(post.createdAt, 'MMM d, yyyy', locale)}
                       </span>
                     </div>
@@ -814,6 +903,14 @@ export default function MapView({
         currentIndex={imageViewerIndex}
         onIndexChange={setImageViewerIndex}
         alt="Report"
+      />
+      <RejectModal
+        isOpen={rejectModalOpen}
+        onClose={handleCloseRejectModal}
+        onConfirm={handleConfirmReject}
+        isLoading={isRejecting}
+        reason={rejectReason}
+        onReasonChange={setRejectReason}
       />
     </div>
   )

@@ -4,13 +4,13 @@ import { useEffect, useState, useCallback } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import api from '@/lib/api'
+import { toast } from 'sonner'
 import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import MapView, { type MapFilters } from '@/components/MapView'
 import { FileText, Clock, CheckCircle, Globe, MapPin, TrendingUp, Users, Check, ChevronLeft, ChevronRight, XCircle } from 'lucide-react'
 import { Post } from '@/lib/types'
 import { formatLocaleDate } from '@/lib/date-locale'
-import { dummyPosts } from '@/lib/dummyData'
 import { subDays, startOfDay, endOfDay } from 'date-fns'
 import 'leaflet/dist/leaflet.css'
 
@@ -68,8 +68,14 @@ function buildPostsQueryParams(
 interface DashboardStats {
   totalPosts: number
   pendingPosts: number
-  approvedPosts: number
-  publishedPosts: number
+  processingPosts: number
+  completedPosts: number
+}
+
+/** From GET /api/stats – trend vs previous period (by sent date). */
+interface StatsTrend {
+  trend7Days: number | null
+  trend30Days: number | null
 }
 
 interface ListResult {
@@ -83,14 +89,15 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     totalPosts: 0,
     pendingPosts: 0,
-    approvedPosts: 0,
-    publishedPosts: 0,
+    processingPosts: 0,
+    completedPosts: 0,
   })
+  const [statsTrend, setStatsTrend] = useState<StatsTrend>({ trend7Days: null, trend30Days: null })
   const [mapFilters, setMapFilters] = useState<MapFilters>(DEFAULT_MAP_FILTERS)
   const [listPage, setListPage] = useState(1)
   const [mapPosts, setMapPosts] = useState<Post[]>([])
   const [listResult, setListResult] = useState<ListResult | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [mapLoading, setMapLoading] = useState(true)
   const [listLoading, setListLoading] = useState(true)
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
@@ -102,29 +109,28 @@ export default function DashboardPage() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const [allPosts, pending, approved, published] = await Promise.all([
-        api.get('/posts?limit=1'),
-        api.get('/posts?status=pending&limit=1'),
-        api.get('/posts?status=approved&limit=1'),
-        api.get('/posts?status=published&limit=1'),
-      ])
+      const res = await api.get('/stats')
+      const data = (res as { result?: { byStatus: Record<string, number>; trend7Days?: number | null; trend30Days?: number | null } })?.result
+      if (!data?.byStatus) {
+        setStats({ totalPosts: 0, pendingPosts: 0, processingPosts: 0, completedPosts: 0 })
+        setStatsTrend({ trend7Days: null, trend30Days: null })
+        return
+      }
+      const s = data.byStatus
       setStats({
-        totalPosts: (allPosts as any).result.pagination.total,
-        pendingPosts: (pending as any).result.pagination.total,
-        approvedPosts: (approved as any).result.pagination.total,
-        publishedPosts: (published as any).result.pagination.total,
+        totalPosts: s.total ?? 0,
+        pendingPosts: s.pending ?? 0,
+        processingPosts: s.processing ?? 0,
+        completedPosts: s.completed ?? 0,
+      })
+      setStatsTrend({
+        trend7Days: data.trend7Days ?? null,
+        trend30Days: data.trend30Days ?? null,
       })
     } catch (e) {
       console.error('Error fetching stats:', e)
-      const pendingCount = dummyPosts.filter((p) => p.status === 'pending').length
-      const approvedCount = dummyPosts.filter((p) => p.status === 'approved').length
-      const publishedCount = dummyPosts.filter((p) => p.status === 'published').length
-      setStats({
-        totalPosts: dummyPosts.length,
-        pendingPosts: pendingCount,
-        approvedPosts: approvedCount,
-        publishedPosts: publishedCount,
-      })
+      setStats({ totalPosts: 0, pendingPosts: 0, processingPosts: 0, completedPosts: 0 })
+      setStatsTrend({ trend7Days: null, trend30Days: null })
     }
   }, [])
 
@@ -165,6 +171,12 @@ export default function DashboardPage() {
     fetchListPosts(mapFilters, listPage)
   }, [mapFilters, listPage, fetchStats, fetchMapPosts, fetchListPosts])
 
+  /** Refetch only list + stats (e.g. after selecting a post). Avoids refetching map so the map doesn't re-fit bounds and re-render. */
+  const refetchListAndStats = useCallback(() => {
+    fetchStats()
+    fetchListPosts(mapFilters, listPage)
+  }, [mapFilters, listPage, fetchStats, fetchListPosts])
+
   useEffect(() => {
     fetchStats()
   }, [fetchStats])
@@ -184,22 +196,15 @@ export default function DashboardPage() {
 
   const handleSelectPost = async (postId: string, status?: string) => {
     setSelectedPostId(postId)
-    if (status === 'completed' || status === 'processing' || status === 'rejected') return
-    try {
-     const res = await api.patch(`/posts/${postId}`, { status: 'processing' }).catch((e) => {
-        console.error('Failed to set processing:', e)
-      })
-      // if(res.result_message.type === 'OK') {
-      //   api.post('/whatsapp/send', {
-      //     to: settings?.categories?.road?.phone || '',
-      //     templateName: 'hello_world',
-      //     languageCode: 'en_US',
-      //   })
-      // }
-      refetchAll()
-    } catch (e) {
-      console.error('Failed to set processing:', e)
-    }
+    // if (status === 'completed' || status === 'processing' || status === 'rejected') return
+    // try {
+    //   await api.patch(`/posts/${postId}`, { status: 'processing' }).catch((e) => {
+    //     console.error('Failed to set processing:', e)
+    //   })
+    //   refetchListAndStats()
+    // } catch (e) {
+    //   console.error('Failed to set processing:', e)
+    // }
   }
 
   const handleCompletePost = async (postId: string, e: React.MouseEvent) => {
@@ -207,10 +212,28 @@ export default function DashboardPage() {
     e.stopPropagation()
     setCompletingPostId(postId)
     try {
-      await api.patch(`/posts/${postId}`, { status: 'completed' })
+      await api.patch(`/posts/${postId}`, { status: 'processing' })
       refetchAll()
+      toast.success(t('common.toast.processingSuccess'))
     } catch (e) {
       console.error('Failed to complete post:', e)
+      toast.error(t('common.toast.processingError'))
+    } finally {
+      setCompletingPostId(null)
+    }
+  }
+
+  const handleMarkAsCompleted = async (postId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setCompletingPostId(postId)
+    try {
+      await api.patch(`/posts/${postId}`, { status: 'completed' })
+      refetchAll()
+      toast.success(t('common.toast.completeSuccess'))
+    } catch (e) {
+      console.error('Failed to complete post:', e)
+      toast.error(t('common.toast.completeError'))
     } finally {
       setCompletingPostId(null)
     }
@@ -241,12 +264,21 @@ export default function DashboardPage() {
       })
       refetchAll()
       closeRejectModal()
+      toast.success(t('common.toast.rejectSuccess'))
     } catch (e) {
       console.error('Failed to reject post:', e)
+      toast.error(t('common.toast.rejectError'))
     } finally {
       setRejectingPostId(null)
     }
   }
+
+  const formatTrend = (value: number | null): string => {
+    if (value === null) return '—'
+    const sign = value >= 0 ? '+' : ''
+    return `${sign}${value}%`
+  }
+  const trendLabel = statsTrend.trend7Days !== null ? t('dashboard.trendVsPrevious7Days') : null
 
   const statCards = [
     {
@@ -254,28 +286,32 @@ export default function DashboardPage() {
       value: stats.totalPosts,
       icon: FileText,
       iconBoxClass: 'bg-primary/10 text-primary dark:bg-blue-500/20 dark:text-blue-400',
-      change: '+12%',
+      change: formatTrend(statsTrend.trend7Days),
+      changePositive: statsTrend.trend7Days === null ? null : (statsTrend.trend7Days ?? 0) >= 0,
     },
     {
       title: t('dashboard.pendingPosts'),
       value: stats.pendingPosts,
       icon: Clock,
       iconBoxClass: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
-      change: '+5%',
+      change: '—',
+      changePositive: null,
     },
     {
-      title: t('dashboard.approvedPosts'),
-      value: stats.approvedPosts,
-      icon: CheckCircle,
-      iconBoxClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
-      change: '+8%',
-    },
-    {
-      title: t('dashboard.publishedPosts'),
-      value: stats.publishedPosts,
+      title: t('dashboard.processingPosts'),
+      value: stats.processingPosts,
       icon: Globe,
       iconBoxClass: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
-      change: '+15%',
+      change: '—',
+      changePositive: null,
+    },
+    {
+      title: t('dashboard.completedPosts'),
+      value: stats.completedPosts,
+      icon: CheckCircle,
+      iconBoxClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
+      change: formatTrend(statsTrend.trend30Days),
+      changePositive: statsTrend.trend30Days === null ? null : (statsTrend.trend30Days ?? 0) >= 0,
     },
   ]
 
@@ -317,8 +353,17 @@ export default function DashboardPage() {
                       <div className={`${card.iconBoxClass} p-3 rounded-lg`}>
                         <Icon className="w-6 h-6" />
                       </div>
-                      <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" />
+                      <span
+                        className={`text-xs font-medium flex items-center gap-1 ${
+                          card.changePositive === null
+                            ? 'text-gray-500 dark:text-gray-400'
+                            : card.changePositive
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-red-600 dark:text-red-400'
+                        }`}
+                        title={index === 0 ? trendLabel ?? undefined : index === 3 ? t('dashboard.trendVsPrevious30Days') : undefined}
+                      >
+                        {card.changePositive !== null && (card.changePositive ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 rotate-180" />)}
                         {card.change}
                       </span>
                     </div>
@@ -379,46 +424,70 @@ export default function DashboardPage() {
                         key={post._id || post.id}
                         role="button"
                         tabIndex={0}
-                        onClick={() => handleSelectPost(post._id || post.id || '', post.status)}
+                        onClick={(e) => { e.stopPropagation(); handleSelectPost(post._id || post.id || '', post.status) }}
                         onKeyDown={(e) => e.key === 'Enter' && handleSelectPost(post._id || post.id || '', post.status)}
-                        className={`border rounded-lg p-4 hover:border-primary transition-colors cursor-pointer ${
-                          selectedPostId === (post._id || post.id)
+                        className={`border rounded-lg p-4 hover:border-primary transition-colors cursor-pointer ${selectedPostId === (post._id || post.id)
                             ? 'border-primary ring-2 ring-primary/30'
                             : 'border-gray-200 dark:border-gray-600'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <h3 className="font-semibold text-sm dark:text-white text-text line-clamp-1 flex-1 min-w-0">
                             {post.title}
                           </h3>
                           <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              onClick={(e) => handleCompletePost(post._id || post.id || '', e)}
-                              disabled={completingPostId === (post._id || post.id) || post.status === 'completed'}
-                              className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-500 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                              title={t('map.markComplete')}
-                            >
-                              {completingPostId === (post._id || post.id) ? (
-                                <span className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
-                              ) : (
-                                <Check className="w-4 h-4" />
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => openRejectModal(post._id || post.id || '', e)}
-                              disabled={post.status === 'rejected'}
-                              className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                              title={t('posts.rejectPost')}
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
+                            {post.status === 'completed' ? (
+                              <span
+                                className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium"
+                                title={t('posts.status.completed')}
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                {t('posts.status.completed')}
+                              </span>
+                            ) : post.status === 'processing' ? (
+                              <button
+                                type="button"
+                                onClick={(e) => handleMarkAsCompleted(post._id || post.id || '', e)}
+                                disabled={completingPostId === (post._id || post.id)}
+                                className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-500 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={t('map.markComplete')}
+                              >
+                                {completingPostId === (post._id || post.id) ? (
+                                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <CheckCircle className="w-4 h-4" />
+                                )}
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleCompletePost(post._id || post.id || '', e)}
+                                  disabled={completingPostId === (post._id || post.id)}
+                                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-500 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title={t('map.markComplete')}
+                                >
+                                  {completingPostId === (post._id || post.id) ? (
+                                    <span className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <Check className="w-4 h-4" />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => openRejectModal(post._id || post.id || '', e)}
+                                  disabled={post.status === 'rejected'}
+                                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500 shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title={t('posts.rejectPost')}
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                             <span
                               className="px-2 py-0.5 rounded text-xs font-medium"
                               style={{
-                                backgroundColor: `${
-                                  post.status === 'published' || post.status === 'completed'
+                                backgroundColor: `${post.status === 'published' || post.status === 'completed'
                                     ? '#16A34A'
                                     : post.status === 'approved'
                                       ? '#1E3A8A'
@@ -427,7 +496,7 @@ export default function DashboardPage() {
                                         : post.status === 'pending'
                                           ? '#F59E0B'
                                           : '#DC2626'
-                                }20`,
+                                  }20`,
                                 color:
                                   post.status === 'published' || post.status === 'completed'
                                     ? '#16A34A'

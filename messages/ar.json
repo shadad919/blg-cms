@@ -21,7 +21,21 @@
     "copied": "تم النسخ!",
     "previous": "السابق",
     "next": "التالي",
-    "pageOf": "صفحة {current} من {total}"
+    "pageOf": "صفحة {current} من {total}",
+    "toast": {
+      "rejectSuccess": "تم رفض التقرير",
+      "rejectError": "فشل رفض التقرير",
+      "processingSuccess": "تم تعيينه قيد المعالجة",
+      "processingError": "فشل تعيين الحالة قيد المعالجة",
+      "completeSuccess": "تم إكمال التقرير",
+      "completeError": "فشل إكمال التقرير",
+      "updateSuccess": "تم تحديث التقرير",
+      "updateError": "فشل تحديث التقرير",
+      "createSuccess": "تم إنشاء التقرير",
+      "createError": "فشل إنشاء التقرير",
+      "deleteSuccess": "تم حذف التقرير",
+      "deleteError": "فشل حذف التقرير"
+    }
   },
   "auth": {
     "loginTitle": "تسجيل دخول المسؤول",
@@ -31,6 +45,8 @@
   },
   "dashboard": {
     "title": "لوحة التحكم",
+    "processingPosts": "التقارير قيد المعالجة",
+    "completedPosts": "التقارير المكتملة",
     "overview": "نظرة عامة",
     "totalPosts": "إجمالي التقارير",
     "pendingPosts": "التقارير المعلقة",
@@ -42,7 +58,9 @@
     "quickActions": "إجراءات سريعة",
     "createNewPost": "إنشاء تقرير جديد",
     "reviewPending": "مراجعة  التقارير المعلقة",
-    "lastUpdated": "آخر تحديث"
+    "lastUpdated": "آخر تحديث",
+    "trendVsPrevious7Days": "مقارنة بآخر 7 أيام (حسب تاريخ الإرسال)",
+    "trendVsPrevious30Days": "مقارنة بآخر 30 يوماً (حسب تاريخ الإرسال)"
   },
   "map": {
     "filters": "تصفية",
@@ -61,6 +79,8 @@
     "statusLabelShort": "الحالة",
     "viewDetails": "عرض التفاصيل",
     "markComplete": "تحديد كمكتمل",
+    "markAsProcessing": "تحديد كقيد المعالجة",
+    "rejectPost": "رفض التقرير",
     "authorLabel": "المؤلف",
     "copyGoogleMapsUrl": "نسخ رابط Google Maps",
     "showOnMap": "عرض على الخريطة",
@@ -131,8 +151,20 @@
   "navigation": {
     "dashboard": "لوحة التحكم",
     "posts": "التقارير",
+    "statistics": "الإحصائيات",
     "menuTitle": "القائمة الرئيسية",
     "settings": "الإعدادات"
+  },
+  "statistics": {
+    "title": "الإحصائيات",
+    "subtitle": "نظرة على التقارير حسب الحالة والفئة والوقت (حسب تاريخ الإرسال).",
+    "statusDistribution": "توزيع الحالات",
+    "byCategory": "التقارير حسب الفئة",
+    "reportsOverTime": "التقارير عبر الزمن (آخر 30 يوماً)",
+    "reportsCount": "التقارير",
+    "noData": "لا توجد بيانات للعرض",
+    "exportExcel": "تصدير إكسل",
+    "exportPdf": "تصدير PDF"
   },
   "settings": {
     "title": "الإعدادات",

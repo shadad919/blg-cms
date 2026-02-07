@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { getLocale } from 'next-intl/server'
 import './globals.css'
 import ThemeProvider from '@/components/ThemeProvider'
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'بلٌغ dashboard',
@@ -54,6 +55,7 @@ export default async function RootLayout({
         />
         <ThemeProvider>
           {children}
+          <Toaster richColors position="top-center" />
         </ThemeProvider>
       </body>
     </html>

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import api from '@/lib/api'
+import { toast } from 'sonner'
 import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react'
@@ -66,9 +67,11 @@ export default function PostsPage() {
 
     try {
       await api.delete(`/posts/${id}`)
+      toast.success(t('common.toast.deleteSuccess'))
       fetchPosts()
     } catch (error) {
       console.error('Error deleting post:', error)
+      toast.error(t('common.toast.deleteError'))
     }
   }
 

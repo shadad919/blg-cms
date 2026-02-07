@@ -18,6 +18,18 @@
   border: none !important;
 }
 
+/* Recharts legend padding and icon spacing */
+.recharts-default-legend {
+  padding: 16px 0 0;
+}
+.recharts-legend-item {
+  margin-right: 1rem;
+}
+.recharts-legend-item .recharts-legend-icon,
+.recharts-legend-item > *:first-child {
+  margin-right: 8px !important;
+}
+
 @layer base {
   body {
     @apply bg-background text-text dark:bg-dark-page dark:text-gray-50;

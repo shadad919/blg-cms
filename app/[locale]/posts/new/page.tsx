@@ -1,7 +1,5 @@
 'use client'
 
-'use client'
-
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -9,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import api from '@/lib/api'
+import { toast } from 'sonner'
 import Layout from '@/components/Layout'
 import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
@@ -50,9 +49,11 @@ export default function NewPostPage() {
         tags: data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
       }
       const response = await api.post('/posts', postData)
+      toast.success(t('common.toast.createSuccess'))
       router.push(`/posts/${response.data.result.id}`)
     } catch (error) {
       console.error('Error creating post:', error)
+      toast.error(t('common.toast.createError'))
     } finally {
       setLoading(false)
     }
